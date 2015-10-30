@@ -45,8 +45,6 @@ class plgContentCsv2htmlInstallerScript
 	{
 		// create a folder inside your images folder
 		JFolder::create(JPATH_ROOT.'/images/jtcsv2html');
-		JFile::copy(JPATH_ROOT.'/images/index.html', JPATH_ROOT.'/images/jtcsv2html/index.html');
-		JFile::copy(JPATH_PLUGINS.'/content/csv2html/assets/default.css', JPATH_ROOT.'/images/jtcsv2html/default.css');
 	}
 
 	/**

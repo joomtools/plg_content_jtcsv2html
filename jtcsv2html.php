@@ -49,7 +49,7 @@ class plgContentJtcsv2html extends JPlugin
 			return;
 		}
 
-		$this->delimiter = trim($this->params->get('delimiter', ';'));
+		$this->delimiter = trim($this->params->get('delimiter', ','));
 		$this->enclosure = trim($this->params->get('enclosure', '"'));
 
 		if(defined('JFIREPHP') && $this->params->get('debug', 0)) {
@@ -272,10 +272,14 @@ class plgContentJtcsv2html extends JPlugin
 					$_match[$key]['replacement'] = $value[0];
 					if(strpos($value[2], ','))
 					{
-						list($filename, $_rest) = explode(',', $value[2], 1);
+						list($filename, $_rest) = explode(',', $value[2], 2);
 						if(strpos($_rest, ','))
 						{
 							list($tplname, $rest) = explode(',', $_rest);
+						}
+						elseif ($_rest != "")
+						{
+							$tplname = $_rest;
 						}
 					}
 					else
@@ -320,6 +324,7 @@ class plgContentJtcsv2html extends JPlugin
 
 		$tpl['tpl'] = 'images/jtcsv2html/';
 		$tpl['tplPlg'] = 'templates/'.$template.'/html/plg_'.$plgType.'_'.$plgName.'/';
+        $tpl['plg'] = 'plugins/'.$plgType.'/'.$plgName.'/tmpl/';
 		$tpl['tplDefault'] = 'images/jtcsv2html/default';
 		$tpl['tplPlgDefault'] = 'templates/'.$template.'/html/plg_'.$plgType.'_'.$plgName.'/default';
 		$tpl['default'] = 'plugins/'.$plgType.'/'.$plgName.'/tmpl/default';
@@ -333,6 +338,9 @@ class plgContentJtcsv2html extends JPlugin
 				break;
 			case file_exists(JPATH_SITE.'/'.$tpl['tplPlg'].$this->_csv['tplname'].'.php'):
 				$tplPath = JPATH_SITE.'/'.$tpl['tplPlg'].$this->_csv['tplname'].'.php';
+				break;
+			case file_exists(JPATH_SITE.'/'.$tpl['plg'].$this->_csv['tplname'].'.php'):
+				$tplPath = JPATH_SITE.'/'.$tpl['plg'].$this->_csv['tplname'].'.php';
 				break;
 			case file_exists(JPATH_SITE.'/'.$tpl['tplDefault'].'.php'):
 				$tplPath = JPATH_SITE.'/'.$tpl['tplDefault'].'.php';
@@ -358,8 +366,8 @@ class plgContentJtcsv2html extends JPlugin
 				$cssPath = JURI::root().$tpl['tplPlg'].$this->_csv['filename'].'.css';
 				$cssFile = $this->_csv['filename'];
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['tpl'].$this->_csv['tplname'].'.css'):
-				$cssPath = JURI::root().$tpl['tpl'].$this->_csv['tplname'].'.css';
+			case file_exists(JPATH_SITE.'/'.$tpl['plg'].$this->_csv['tplname'].'.css'):
+				$cssPath = JURI::root().$tpl['plg'].$this->_csv['tplname'].'.css';
 				$cssFile = $this->_csv['tplname'];
 				break;
 			case file_exists(JPATH_SITE.'/'.$tpl['tplPlg'].$this->_csv['tplname'].'.css'):
