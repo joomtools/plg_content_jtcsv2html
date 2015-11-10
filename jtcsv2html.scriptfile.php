@@ -25,7 +25,7 @@ defined('_JEXEC') or die('Restricted access');
 jimport('joomla.filesystem.folder');
 jimport('joomla.filesystem.file');
 
-class plgContentCsv2htmlInstallerScript
+class plgContentJtCsv2htmlInstallerScript
 {
 	/**
 	 * Constructor
