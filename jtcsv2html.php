@@ -758,10 +758,21 @@ class plgContentJtcsv2html extends JPlugin
 		$FB = $this->FB;
 		if($FB) $FB->group(__FUNCTION__.'()', array('Collapsed' => true, 'Color' => '#6699CC'));
 
+		$output = '<div class="jtcsv2html_wrapper">';
+
+		if($this->params->get('search',1))
+		{
+			$output .= '<input type="text" class="search" placeholder="Type to search">';
+			JHtml::_('jquery.framework');
+			JHtml::script('/plugins/content/jtcsv2html/assets/plg_jtcsv2html.js', false, false);
+		}
+
 		ob_start();
 		require $this->_csv['tplPath'];
 
-		$output = ob_get_clean();
+		$output .= ob_get_clean();
+
+		$output .= '</div>';
 
 		if($FB) $FB->log($output, '$output');
 
