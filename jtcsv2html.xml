@@ -71,15 +71,6 @@
 					<option value="1">JYES</option>
 					<option value="0">JNO</option>
 				</field>
-				<field name="debug"
-				       type="radio"
-				       class="btn-group"
-				       default="0"
-				       label="PLG_CONTENT_JTCSV2HTML_DEBUG"
-				       description="PLG_CONTENT_JTCSV2HTML_DEBUGDESC">
-					<option value="1">JYES</option>
-					<option value="0">JNO</option>
-				</field>
 			</fieldset>
 
 		</fields>

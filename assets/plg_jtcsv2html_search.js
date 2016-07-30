@@ -1,10 +1,3 @@
-/**
- * @package    
- *
- * @author     
- * @copyright  
- * @license    GNU General Public License version 2 or later; see LICENSE
- */
 (function ($) {
     $(document).ready(function ()
     {
