@@ -1,22 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension type="plugin" group="content" version="2.5" method="upgrade">
 	<name>PLG_CONTENT_JTCSV2HTML</name>
-	<creationDate>2014</creationDate>
-	<version>2.5.5-dev</version>
+	<creationDate>2016-07-30</creationDate>
 	<author>Guido De Gobbis</author>
-	<copyright>(C) JoomTools.de. All rights reserved.</copyright>
-	<license>GNU General Public License version 3 or later.</license>
-	<authorEmail>guido.de.gobbis@joomtools.de</authorEmail>
+	<authorEmail>support@joomtools.de</authorEmail>
+	<authorUrl>www.joomtools.de</authorUrl>
+	<copyright>Copyright (C) 2016 JoomTools.de. All rights reserved.</copyright>
+	<license>GPL v3</license>
+	<version>2.5.5</version>
 	<description>PLG_CONTENT_JTCSV2HTML_XML_DESCRIPTION</description>
 
 	<files>
-		<filename plugin="jtcsv2html">jtcsv2html.php</filename>
-		<filename>jtcsv2html.scriptfile.php</filename>
-		<folder>language</folder>
 		<folder>assets</folder>
-		<folder>sql</folder>
-		<folder>tmpl</folder>
+<folder>testfile</folder>
+<folder>tmpl</folder>
+<folder>sql</folder>
+<file plugin="jtcsv2html">jtcsv2html.php</file>
+<file>jtcsv2html.scriptfile.php</file>
+<file>LICENSE</file>
+<file>README.md</file>
+<file>jtcsv2html.xml</file>
 	</files>
+
+	<languages folder="language">
+		<language tag="de-DE">de-DE/de-DE.plg_content_jtcsv2html.ini</language>
+<language tag="de-DE">de-DE/de-DE.plg_content_jtcsv2html.sys.ini</language>
+<language tag="en-GB">en-GB/en-GB.plg_content_jtcsv2html.ini</language>
+<language tag="en-GB">en-GB/en-GB.plg_content_jtcsv2html.sys.ini</language>
+	</languages>
 
 	<install>
 		<sql>
