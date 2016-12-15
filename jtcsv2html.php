@@ -497,7 +497,7 @@ class plgContentJtcsv2html extends JPlugin
 		{
 			$output .= '<input type="text" class="search" placeholder="Type to search">';
 			JHtml::_('jquery.framework');
-			JHtml::script('/plugins/content/jtcsv2html/assets/plg_jtcsv2html_search.js', false, false);
+			JHtml::script('plugins/content/jtcsv2html/assets/plg_jtcsv2html_search.js', false, false);
 		}
 
 		ob_start();
