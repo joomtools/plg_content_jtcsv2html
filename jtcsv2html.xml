@@ -7,7 +7,7 @@
 	<authorUrl>www.joomtools.de</authorUrl>
 	<copyright>Copyright (C) 2016 JoomTools.de. All rights reserved.</copyright>
 	<license>GPL v3</license>
-	<version>2.5.5</version>
+	<version>3.0.0-dev</version>
 	<description>PLG_CONTENT_JTCSV2HTML_XML_DESCRIPTION</description>
 
 	<files>
@@ -31,7 +31,7 @@
 
 	<install>
 		<sql>
-			<file driver="mysql" charset="utf8">sql/install.mysql.utf8.sql</file>
+			<file driver="mysql" charset="utf8">sql/install.mysql.utf8mb4.sql</file>
 		</sql>
 	</install>
 

@@ -17,28 +17,32 @@
  *  GNU General Public License for more details.
  */
 
+.jtcsv2html_wrapper {
+	margin: 2em 0;
+}
 
-.jtcsv2html_wrapper table {
+.jtcsv2html_wrapper table.default {
 	background-color: #ebf2fa;
 	border-bottom: 2px solid #f3d9c2;
-	width: 100%;
 }
 
-.jtcsv2html_wrapper thead th.csvcol1 {
+.jtcsv2html_wrapper table.default th,
+.jtcsv2html_wrapper table.default th a {
 	text-align: left;
-}
-
-.jtcsv2html_wrapper tbody th,
-.jtcsv2html_wrapper thead th,
-.jtcsv2html_wrapper tbody th a,
-.jtcsv2html_wrapper thead th a {
 	background-color: #f3d9c2;
 	color: #6c6c6c;
 }
 
-.jtcsv2html_wrapper tbody tr:hover th[scope="row"],
-.jtcsv2html_wrapper tbody tr:hover { background: #6699cc; }
 
-.jtcsv2html_wrapper tbody tr:hover td { background: #6699cc; color: #ffffff; }
+.jtcsv2html_wrapper table.default tbody tr:hover th[scope="row"],
+.jtcsv2html_wrapper table.default tbody tr:hover {
+	background: #6699cc;
+}
 
-.jtcsv2html_wrapper tbody td { border-bottom: 1px solid #ffffff; }
+.jtcsv2html_wrapper table.default tbody tr:hover td {
+	color: #ffffff;
+}
+
+.jtcsv2html_wrapper table.default tbody td {
+	border-bottom: 1px solid #ffffff;
+}

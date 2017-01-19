@@ -21,7 +21,7 @@
 // no direct access
 defined('_JEXEC') or die;
 ?>
-<table class="<?php echo $this->_csv['tplname']; ?>">
+<table class="<?php echo $this->_csv['filename']; ?> <?php echo $this->_csv['tplname']; ?>">
 	<thead>
 	<tr>
 		<?php // erstellen der Kopfzeile

@@ -28,6 +28,7 @@ class plgContentJtcsv2html extends JPlugin
 	private $old_pattern = '@(<[^>]+>|){csv2html (.*)}(</[^>]+>|)@Usi';
 	private $delimiter = null;
 	private $enclosure = null;
+	private $filter = null;
 	private $cssFiles = array();
 	private $_error = null;
 	private $_matches = false;
@@ -52,6 +53,7 @@ class plgContentJtcsv2html extends JPlugin
 
 		$this->delimiter = trim($this->params->get('delimiter', ','));
 		$this->enclosure = trim($this->params->get('enclosure', '"'));
+		$this->filter    = trim($this->params->get('filter', 0));
 
 		if ($this->params->get('clearDB', 0))
 		{
@@ -66,7 +68,7 @@ class plgContentJtcsv2html extends JPlugin
 
 		// Zuruecksetzen des Parameters
 		$this->params->set('clearDB', 0);
-		$params  = $this->params->toString();
+		$params = $this->params->toString();
 		//$plgName = $this->_name;
 
 		$query->clear();
@@ -89,7 +91,11 @@ class plgContentJtcsv2html extends JPlugin
 
 	public function onContentPrepare($context, &$article, &$params, $limitstart)
 	{
-		if (!JFactory::getApplication()->isSite()) return;
+		if (!JFactory::getApplication()->isSite())
+		{
+			return;
+		}
+
 		$app = JFactory::getApplication();
 
 		if (version_compare(phpversion(), '5.3', '<'))
@@ -113,10 +119,11 @@ class plgContentJtcsv2html extends JPlugin
 			{
 				$file = JPATH_SITE . '/images/jtcsv2html/' . $_matches['fileName'] . '.csv';
 
-				$this->_csv['cid']      = $article->id;
+				$this->_csv['cid']      = !empty($article->id) ? $article->id : '';
 				$this->_csv['file']     = $file;
 				$this->_csv['filename'] = $_matches['fileName'];
 				$this->_csv['tplname']  = $_matches['tplName'];
+				$this->_csv['filter']   = $_matches['filter'];
 				$this->_csv['filetime'] = (file_exists($file)) ? filemtime($file) : -1;
 
 				$this->_setTplPath();
@@ -202,31 +209,46 @@ class plgContentJtcsv2html extends JPlugin
 
 		if ($matches)
 		{
+			$filter = (boolean) $this->filter;
+
 			while ($match = each($matches))
 			{
 				foreach ($match[1] as $key => $value)
 				{
-					$tplname = null;
+					$tplname = 'default';
 
 					$_match[$key]['replacement'] = $value[0];
+
 					if (strpos($value[2], ','))
 					{
-						list($filename, $_rest) = explode(',', $value[2], 2);
-						if (strpos($_rest, ','))
+						$parameter = explode(',', $value[2], 2);
+						$filename  = trim(strtolower($parameter[0]));
+						$count     = count($parameter);
+
+						if ($count == 2)
 						{
-							list($tplname, $rest) = explode(',', $_rest);
+							$tplname = trim(strtolower($parameter[1]));
 						}
-						elseif ($_rest != "")
+						elseif ($count == 3)
 						{
-							$tplname = $_rest;
+							if (trim(strtolower($parameter[2])) == 'on')
+							{
+								$filter = true;
+							}
+							elseif (trim(strtolower($parameter[2])) == 'off')
+							{
+								$filter = false;
+							}
 						}
 					}
 					else
 					{
 						$filename = $value[2];
 					}
-					$_match[$key]['fileName'] = trim($filename);
-					$_match[$key]['tplName']  = ($tplname) ? trim($tplname) : trim($filename);
+
+					$_match[$key]['fileName'] = $filename;
+					$_match[$key]['tplName']  = $tplname;
+					$_match[$key]['filter']   = $filter;
 				}
 
 				$this->_matches[] = $_match;
@@ -309,7 +331,12 @@ class plgContentJtcsv2html extends JPlugin
 	protected function _dbChkCache()
 	{
 		$db       = JFactory::getDBO();
-		$cid      = $this->_csv['cid'];
+
+		if ($cid = $this->_csv['cid'] == '')
+		{
+			return;
+		}
+
 		$filename = $this->_csv['filename'];
 		$tplname  = $this->_csv['tplname'];
 		$filetime = $this->_csv['filetime'];
@@ -352,7 +379,12 @@ class plgContentJtcsv2html extends JPlugin
 	protected function _dbLoadCache()
 	{
 		$return = false;
-		$cid    = $this->_csv['cid'];
+
+		if ($cid = $this->_csv['cid'] == '')
+		{
+			return;
+		}
+
 		$db     = JFactory::getDBO();
 		$query  = $db->getQuery(true);
 
@@ -381,7 +413,12 @@ class plgContentJtcsv2html extends JPlugin
 	protected function _dbUpdateCache($id)
 	{
 		$return   = false;
-		$cid      = $this->_csv['cid'];
+
+		if ($cid = $this->_csv['cid'] == '')
+		{
+			return;
+		}
+
 		$filename = $this->_csv['filename'];
 		$tplname  = $this->_csv['tplname'];
 		$filetime = $this->_csv['filetime'];
@@ -493,7 +530,7 @@ class plgContentJtcsv2html extends JPlugin
 	{
 		$output = '<div class="jtcsv2html_wrapper">';
 
-		if ($this->params->get('search', 1))
+		if ($this->_csv['filter'])
 		{
 			$output .= '<input type="text" class="search" placeholder="Type to search">';
 			JHtml::_('jquery.framework');
@@ -517,7 +554,12 @@ class plgContentJtcsv2html extends JPlugin
 	protected function _dbSaveCache()
 	{
 		$return   = false;
-		$cid      = $this->_csv['cid'];
+
+		if ($cid = $this->_csv['cid'] == '')
+		{
+			return;
+		}
+
 		$filename = $this->_csv['filename'];
 		$tplname  = $this->_csv['tplname'];
 		$filetime = $this->_csv['filetime'];
@@ -552,7 +594,7 @@ class plgContentJtcsv2html extends JPlugin
 		$cid      = $this->_csv['cid'];
 		$filename = $this->_csv['filename'];
 //		$tplname  = $this->_csv['tplname'];
-		$query    = $db->getQuery(true);
+		$query = $db->getQuery(true);
 
 		$query->clear();
 		$query->delete('#__jtcsv2html');
