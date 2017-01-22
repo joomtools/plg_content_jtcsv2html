@@ -97,7 +97,7 @@
 	</config>
 
 	<updateservers>
-		<server type="extension" priority="1" name="PLG_CONTENT_JTCSV2HTML">https://raw.githubusercontent.com/JoomTools/updateserver/master/jtcsv2html.xml</server>
+		<server type="extension" priority="1" name="PLG_CONTENT_JTCSV2HTML">https://raw.githubusercontent.com/JoomTools/updateserver/master/plg_content_jtcsv2html.xml</server>
 	</updateservers>
 
 </extension>
