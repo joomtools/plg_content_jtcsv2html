@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension type="plugin" group="content" version="2.5" method="upgrade">
 	<name>PLG_CONTENT_JTCSV2HTML</name>
-	<creationDate>2016-07-30</creationDate>
+	<creationDate>2017-01-22</creationDate>
 	<author>Guido De Gobbis</author>
 	<authorEmail>support@joomtools.de</authorEmail>
 	<authorUrl>www.joomtools.de</authorUrl>
@@ -12,21 +12,21 @@
 
 	<files>
 		<folder>assets</folder>
-<folder>testfile</folder>
-<folder>tmpl</folder>
-<folder>sql</folder>
-<file plugin="jtcsv2html">jtcsv2html.php</file>
-<file>jtcsv2html.scriptfile.php</file>
-<file>LICENSE</file>
-<file>README.md</file>
-<file>jtcsv2html.xml</file>
+		<folder>testfile</folder>
+		<folder>tmpl</folder>
+		<folder>sql</folder>
+		<file plugin="jtcsv2html">jtcsv2html.php</file>
+		<file>jtcsv2html.scriptfile.php</file>
+		<file>LICENSE</file>
+		<file>README.md</file>
+		<file>jtcsv2html.xml</file>
 	</files>
 
 	<languages folder="language">
 		<language tag="de-DE">de-DE/de-DE.plg_content_jtcsv2html.ini</language>
-<language tag="de-DE">de-DE/de-DE.plg_content_jtcsv2html.sys.ini</language>
-<language tag="en-GB">en-GB/en-GB.plg_content_jtcsv2html.ini</language>
-<language tag="en-GB">en-GB/en-GB.plg_content_jtcsv2html.sys.ini</language>
+		<language tag="de-DE">de-DE/de-DE.plg_content_jtcsv2html.sys.ini</language>
+		<language tag="en-GB">en-GB/en-GB.plg_content_jtcsv2html.ini</language>
+		<language tag="en-GB">en-GB/en-GB.plg_content_jtcsv2html.sys.ini</language>
 	</languages>
 
 	<install>
@@ -52,7 +52,7 @@
 				       size="1"
 				       default=","
 				       label="PLG_CONTENT_JTCSV2HTML_DELIMITER"
-				       description="PLG_CONTENT_JTCSV2HTML_DELIMITER_DESC" >
+				       description="PLG_CONTENT_JTCSV2HTML_DELIMITER_DESC">
 					<option value=",">PLG_CONTENT_JTCSV2HTML_DELIMITER_KOMMATA</option>
 					<option value=";">PLG_CONTENT_JTCSV2HTML_DELIMITER_SEMICOLON</option>
 					<option value="\t">PLG_CONTENT_JTCSV2HTML_DELIMITER_TAB</option>
@@ -63,7 +63,16 @@
 				       size="1"
 				       default='"'
 				       label="PLG_CONTENT_JTCSV2HTML_ENCLOSURE"
-				       description="PLG_CONTENT_JTCSV2HTML_ENCLOSURE_DESC" />
+				       description="PLG_CONTENT_JTCSV2HTML_ENCLOSURE_DESC"/>
+				<field name="filter"
+				       type="radio"
+				       class="btn-group"
+				       default="0"
+				       label="PLG_CONTENT_JTCSV2HTML_FILTER"
+				       description="PLG_CONTENT_JTCSV2HTML_FILTER_DESC">
+					<option value="1">JYES</option>
+					<option value="0">JNO</option>
+				</field>
 				<field name="cache"
 				       type="radio"
 				       class="btn-group"
@@ -88,7 +97,9 @@
 	</config>
 
 	<updateservers>
-		<server type="extension" priority="1" name="Plugin - JT - Csv2Html">http://updateserver.joomtools.de/extensions.xml</server>
+		<server type="extension" priority="1" name="Plugin - JT - Csv2Html">
+			http://updateserver.joomtools.de/extensions.xml
+		</server>
 	</updateservers>
 
 </extension>

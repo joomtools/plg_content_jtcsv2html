@@ -1,11 +1,11 @@
 <?php
 /**
  * @Copyright  JoomTools
- * @package    JT - Csv2Html - Plugin for Joomla! 2.5.x - 3.x
+ * @package    JT - Csv2Html - Plugin for Joomla! 3.x
  * @author     Guido De Gobbis
  * @link       http://www.joomtools.de
  *
- * @license    GNU/GPL <http://www.gnu.org/licenses/>
+ * @license    GNU/GPL v3 <http://www.gnu.org/licenses/>
  *             This program is free software: you can redistribute it and/or modify
  *             it under the terms of the GNU General Public License as published by
  *             the Free Software Foundation, either version 3 of the License, or
@@ -89,7 +89,7 @@ class plgContentJtcsv2html extends JPlugin
 		$db->execute();
 	}
 
-	public function onContentPrepare($context, &$article, &$params, $limitstart)
+	public function onContentPrepare($context, &$article, &$params, $limitstart = 0)
 	{
 		if (!JFactory::getApplication()->isSite())
 		{
@@ -143,7 +143,24 @@ class plgContentJtcsv2html extends JPlugin
 					/* Plugin-Aufruf durch HTML-Ausgabe ersetzen */
 					if ($setOutput)
 					{
-						$article->text = str_replace($_matches['replacement'], $this->_html, $article->text);
+						$output = '<div class="jtcsv2html_wrapper">';
+
+						if ($this->_csv['filter'])
+						{
+							$output .= '<input type="text" class="search" placeholder="Type to search">';
+							JHtml::_('jquery.framework');
+							JHtml::script('plugins/content/jtcsv2html/assets/plg_jtcsv2html_search.js', false, false);
+						}
+						$output .= $this->_html;
+						$output .= '</div>';
+
+						if (!class_exists('Minify_HTML'))
+						{
+							require_once 'assets/minifyHTML.inc';
+						}
+						$output = Minify_HTML::minify($output);
+
+						$article->text = str_replace($_matches['replacement'], $output, $article->text);
 					}
 					else
 					{
@@ -221,15 +238,16 @@ class plgContentJtcsv2html extends JPlugin
 
 					if (strpos($value[2], ','))
 					{
-						$parameter = explode(',', $value[2], 2);
+						$parameter = explode(',', $value[2], 3);
 						$filename  = trim(strtolower($parameter[0]));
 						$count     = count($parameter);
 
-						if ($count == 2)
+						if ($count >= 2)
 						{
 							$tplname = trim(strtolower($parameter[1]));
 						}
-						elseif ($count == 3)
+
+						if ($count == 3)
 						{
 							if (trim(strtolower($parameter[2])) == 'on')
 							{
@@ -274,20 +292,20 @@ class plgContentJtcsv2html extends JPlugin
 
 		switch (true)
 		{
-			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['tplname'] . '.php'):
-				$tplPath = JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['tplname'] . '.php';
-				break;
 			case file_exists(JPATH_SITE . '/' . $tpl['tplPlg'] . $this->_csv['tplname'] . '.php'):
 				$tplPath = JPATH_SITE . '/' . $tpl['tplPlg'] . $this->_csv['tplname'] . '.php';
+				break;
+			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['tplname'] . '.php'):
+				$tplPath = JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['tplname'] . '.php';
 				break;
 			case file_exists(JPATH_SITE . '/' . $tpl['plg'] . $this->_csv['tplname'] . '.php'):
 				$tplPath = JPATH_SITE . '/' . $tpl['plg'] . $this->_csv['tplname'] . '.php';
 				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tplDefault'] . '.php'):
-				$tplPath = JPATH_SITE . '/' . $tpl['tplDefault'] . '.php';
-				break;
 			case file_exists(JPATH_SITE . '/' . $tpl['tplPlgDefault'] . '.php'):
 				$tplPath = JPATH_SITE . '/' . $tpl['tplPlgDefault'] . '.php';
+				break;
+			case file_exists(JPATH_SITE . '/' . $tpl['tplDefault'] . '.php'):
+				$tplPath = JPATH_SITE . '/' . $tpl['tplDefault'] . '.php';
 				break;
 			default:
 				$tplPath = JPATH_SITE . '/' . $tpl['default'] . '.php';
@@ -297,27 +315,31 @@ class plgContentJtcsv2html extends JPlugin
 		$cssFile = 'default';
 		switch (true)
 		{
-			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['filename'] . '.css'):
-				$cssPath = JURI::root() . $tpl['tpl'] . $this->_csv['filename'] . '.css';
-				$cssFile = $this->_csv['filename'];
-				break;
 			case file_exists(JPATH_SITE . '/' . $tpl['tplPlg'] . $this->_csv['filename'] . '.css'):
 				$cssPath = JURI::root() . $tpl['tplPlg'] . $this->_csv['filename'] . '.css';
 				$cssFile = $this->_csv['filename'];
 				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['plg'] . $this->_csv['tplname'] . '.css'):
-				$cssPath = JURI::root() . $tpl['plg'] . $this->_csv['tplname'] . '.css';
-				$cssFile = $this->_csv['tplname'];
+			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['filename'] . '.css'):
+				$cssPath = JURI::root() . $tpl['tpl'] . $this->_csv['filename'] . '.css';
+				$cssFile = $this->_csv['filename'];
 				break;
 			case file_exists(JPATH_SITE . '/' . $tpl['tplPlg'] . $this->_csv['tplname'] . '.css'):
 				$cssPath = JURI::root() . $tpl['tplPlg'] . $this->_csv['tplname'] . '.css';
 				$cssFile = $this->_csv['tplname'];
 				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tplDefault'] . '.css'):
-				$cssPath = JURI::root() . $tpl['tplDefault'] . '.css';
+			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['tplname'] . '.css'):
+				$cssPath = JURI::root() . $tpl['tpl'] . $this->_csv['tplname'] . '.css';
+				$cssFile = $this->_csv['tplname'];
+				break;
+			case file_exists(JPATH_SITE . '/' . $tpl['plg'] . $this->_csv['tplname'] . '.css'):
+				$cssPath = JURI::root() . $tpl['plg'] . $this->_csv['tplname'] . '.css';
+				$cssFile = $this->_csv['tplname'];
 				break;
 			case file_exists(JPATH_SITE . '/' . $tpl['tplPlgDefault'] . '.css'):
 				$cssPath = JURI::root() . $tpl['tplPlgDefault'] . '.css';
+				break;
+			case file_exists(JPATH_SITE . '/' . $tpl['tplDefault'] . '.css'):
+				$cssPath = JURI::root() . $tpl['tplDefault'] . '.css';
 				break;
 			default:
 				$cssPath = JURI::root() . $tpl['default'] . '.css';
@@ -330,7 +352,7 @@ class plgContentJtcsv2html extends JPlugin
 
 	protected function _dbChkCache()
 	{
-		$db       = JFactory::getDBO();
+		$db = JFactory::getDBO();
 
 		if ($cid = $this->_csv['cid'] == '')
 		{
@@ -385,8 +407,8 @@ class plgContentJtcsv2html extends JPlugin
 			return;
 		}
 
-		$db     = JFactory::getDBO();
-		$query  = $db->getQuery(true);
+		$db    = JFactory::getDBO();
+		$query = $db->getQuery(true);
 
 		$filename = $this->_csv['filename'];
 		$tplname  = $this->_csv['tplname'];
@@ -412,7 +434,7 @@ class plgContentJtcsv2html extends JPlugin
 
 	protected function _dbUpdateCache($id)
 	{
-		$return   = false;
+		$return = false;
 
 		if ($cid = $this->_csv['cid'] == '')
 		{
@@ -528,32 +550,15 @@ class plgContentJtcsv2html extends JPlugin
 
 	protected function _buildHtml()
 	{
-		$output = '<div class="jtcsv2html_wrapper">';
-
-		if ($this->_csv['filter'])
-		{
-			$output .= '<input type="text" class="search" placeholder="Type to search">';
-			JHtml::_('jquery.framework');
-			JHtml::script('plugins/content/jtcsv2html/assets/plg_jtcsv2html_search.js', false, false);
-		}
-
 		ob_start();
 		require $this->_csv['tplPath'];
 
-		$output .= ob_get_clean();
-
-		$output .= '</div>';
-
-		if (!class_exists('Minify_HTML'))
-		{
-			require_once 'assets/minifyHTML.inc';
-		}
-		$this->_html = Minify_HTML::minify($output);
+		$this->_html = ob_get_clean();
 	}
 
 	protected function _dbSaveCache()
 	{
-		$return   = false;
+		$return = false;
 
 		if ($cid = $this->_csv['cid'] == '')
 		{
