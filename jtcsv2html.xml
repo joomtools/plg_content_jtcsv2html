@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<extension type="plugin" group="content" version="2.5" method="upgrade">
+<extension type="plugin" group="content" version="3" method="upgrade">
 	<name>PLG_CONTENT_JTCSV2HTML</name>
 	<creationDate>2017-01-22</creationDate>
 	<author>Guido De Gobbis</author>
@@ -97,9 +97,7 @@
 	</config>
 
 	<updateservers>
-		<server type="extension" priority="1" name="Plugin - JT - Csv2Html">
-			http://updateserver.joomtools.de/extensions.xml
-		</server>
+		<server type="extension" priority="1" name="PLG_CONTENT_JTCSV2HTML">https://raw.githubusercontent.com/JoomTools/updateserver/master/jtcsv2html.xml</server>
 	</updateservers>
 
 </extension>
