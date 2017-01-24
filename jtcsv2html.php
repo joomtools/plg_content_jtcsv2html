@@ -226,12 +226,11 @@ class plgContentJtcsv2html extends JPlugin
 
 		if ($matches)
 		{
-			$filter = (boolean) $this->filter;
-
 			while ($match = each($matches))
 			{
 				foreach ($match[1] as $key => $value)
 				{
+					$filter  = (boolean) $this->filter;
 					$tplname = 'default';
 
 					$_match[$key]['replacement'] = $value[0];
