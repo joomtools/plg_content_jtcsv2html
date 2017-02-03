@@ -35,6 +35,18 @@ class plgContentJtcsv2html extends JPlugin
 	private $_csv = array();
 	private $_html = '';
 
+	private static $articleId;
+
+	private static function getArticleId($id = null)
+	{
+		if (!empty($id))
+		{
+			self::$articleId = $id;
+		}
+
+		return self::$articleId;
+	}
+
 	public function __construct(&$subject, $params)
 	{
 		//if(!JFactory::getApplication()->isSite()) return;
@@ -119,7 +131,9 @@ class plgContentJtcsv2html extends JPlugin
 			{
 				$file = JPATH_SITE . '/images/jtcsv2html/' . $_matches['fileName'] . '.csv';
 
-				$this->_csv['cid']      = !empty($article->id) ? $article->id : '';
+				$articleId = !empty($article->id) ? $article->id : null;
+
+				$this->_csv['cid']      = self::getArticleId($articleId);
 				$this->_csv['file']     = $file;
 				$this->_csv['filename'] = $_matches['fileName'];
 				$this->_csv['tplname']  = $_matches['tplName'];
