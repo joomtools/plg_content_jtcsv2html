@@ -366,8 +366,9 @@ class plgContentJtcsv2html extends JPlugin
 	protected function _dbChkCache()
 	{
 		$db = JFactory::getDBO();
+		$cid = $this->_csv['cid'];
 
-		if ($cid = $this->_csv['cid'] == '')
+		if (empty($cid))
 		{
 			return;
 		}
@@ -414,8 +415,9 @@ class plgContentJtcsv2html extends JPlugin
 	protected function _dbLoadCache()
 	{
 		$return = false;
+		$cid = $this->_csv['cid'];
 
-		if ($cid = $this->_csv['cid'] == '')
+		if (empty($cid))
 		{
 			return;
 		}
@@ -448,8 +450,9 @@ class plgContentJtcsv2html extends JPlugin
 	protected function _dbUpdateCache($id)
 	{
 		$return = false;
+		$cid = $this->_csv['cid'];
 
-		if ($cid = $this->_csv['cid'] == '')
+		if (empty($cid))
 		{
 			return;
 		}
@@ -572,8 +575,9 @@ class plgContentJtcsv2html extends JPlugin
 	protected function _dbSaveCache()
 	{
 		$return = false;
+		$cid = $this->_csv['cid'];
 
-		if ($cid = $this->_csv['cid'] == '')
+		if (empty($cid))
 		{
 			return;
 		}
