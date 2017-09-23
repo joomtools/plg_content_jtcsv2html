@@ -10,4 +10,4 @@ CREATE TABLE IF NOT EXISTS `#__jtcsv2html` (
   `filetime` varchar(255) NOT NULL COMMENT 'Dateidatum im UNIX-Format',
   `datas` longtext NOT NULL COMMENT 'Ausgabe der CSV-Datei als Tabelle (Template-HTML)',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Tabelle das Plugins jtcsv2html' AUTO_INCREMENT=0;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 DEFAULT COLLATE=utf8mb4_unicode_ci COMMENT='Tabelle das Plugins jtcsv2html' AUTO_INCREMENT=0;

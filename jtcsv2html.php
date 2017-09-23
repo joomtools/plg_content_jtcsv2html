@@ -1,11 +1,11 @@
 <?php
 /**
  * @Copyright  JoomTools
- * @package    JT - Csv2Html - Plugin for Joomla! 2.5.x - 3.x
+ * @package    JT - Csv2Html - Plugin for Joomla! 3.x
  * @author     Guido De Gobbis
  * @link       http://www.joomtools.de
  *
- * @license    GNU/GPL <http://www.gnu.org/licenses/>
+ * @license    GNU/GPL v3 <http://www.gnu.org/licenses/>
  *             This program is free software: you can redistribute it and/or modify
  *             it under the terms of the GNU General Public License as published by
  *             the Free Software Foundation, either version 3 of the License, or
@@ -26,14 +26,26 @@ class plgContentJtcsv2html extends JPlugin
 
 	private $pattern = '@(<[^>]+>|){jtcsv2html (.*)}(</[^>]+>|)@Usi';
 	private $old_pattern = '@(<[^>]+>|){csv2html (.*)}(</[^>]+>|)@Usi';
-	private $delimiter = NULL;
-	private $enclosure = NULL;
+	private $delimiter = null;
+	private $enclosure = null;
+	private $filter = null;
 	private $cssFiles = array();
-	private $_error = NULL;
+	private $_error = null;
 	private $_matches = false;
 	private $_csv = array();
 	private $_html = '';
-	private $FB = false;
+
+	private static $articleId;
+
+	private static function getArticleId($id = null)
+	{
+		if (!empty($id))
+		{
+			self::$articleId = $id;
+		}
+
+		return self::$articleId;
+	}
 
 	public function __construct(&$subject, $params)
 	{
@@ -44,371 +56,328 @@ class plgContentJtcsv2html extends JPlugin
 		$this->loadLanguage('plg_content_jtcsv2html');
 		$app = JFactory::getApplication();
 
-		if (version_compare(phpversion(), '5.3', '<')) {
+		if (version_compare(phpversion(), '5.3', '<'))
+		{
 			$app->enqueueMessage(JText::_('PLG_CONTENT_JTCSV2HTML_PHP_VERSION'), 'warning');
+
 			return;
 		}
 
 		$this->delimiter = trim($this->params->get('delimiter', ','));
 		$this->enclosure = trim($this->params->get('enclosure', '"'));
+		$this->filter    = trim($this->params->get('filter', 0));
 
-		if(defined('JFIREPHP') && $this->params->get('debug', 0)) {
-			$this->FB = FirePHP::getInstance(true);
-		} else {
-			$this->FB = false;
-		}
-
-		if($this->params->get('clearDB', 0)) {
-			if($this->FB) $this->FB->group(__FUNCTION__ . '()', array('Collapsed' => true, 'Color' => '#6699CC'));
+		if ($this->params->get('clearDB', 0))
+		{
 			$this->_dbClearAll();
-			if($this->FB) $this->FB->groupEnd();
-
 		}
 	}
 
-	public function onContentPrepare($context, &$article, &$params, $limitstart)
+	protected function _dbClearAll()
 	{
-		if(!JFactory::getApplication()->isSite()) return;
-		$app = JFactory::getApplication();
+		$db    = JFactory::getDBO();
+		$query = $db->getQuery(true);
 
-		if (version_compare(phpversion(), '5.3', '<')) {
+		// Zuruecksetzen des Parameters
+		$this->params->set('clearDB', 0);
+		$params = $this->params->toString();
+		//$plgName = $this->_name;
+
+		$query->clear();
+		$query->update('#__extensions');
+		$query->set('params=' . $db->quote($params));
+		$query->where('name=' . $db->quote('PLG_CONTENT_JTCSV2HTML'));
+
+		$db->setQuery($query);
+		$db->execute();
+
+		// Loeschen aller Daten aus der Datenbank
+		$query->clear();
+		$db->setQuery('TRUNCATE #__jtcsv2html');
+		$db->execute();
+
+		$query->clear();
+		$db->setQuery('OPTIMIZE TABLE #__jtcsv2html');
+		$db->execute();
+	}
+
+	public function onContentPrepare($context, &$article, &$params, $limitstart = 0)
+	{
+		if (!JFactory::getApplication()->isSite())
+		{
 			return;
 		}
 
-		/* Prüfen ob Plugin-Platzhalter im Text ist */
-//		if(!preg_match($this->pattern, $article->text) && !preg_match($this->old_pattern, $article->text)) return;
+		$app = JFactory::getApplication();
 
-		$FB = $this->FB;
-		$_error = ($context == 'com_content.search') ? false : true;
-		$cache = $this->params->get('cache', 1);
-		$this->_error = $_error;
-		$timestart = microtime(true);
-
-		if($FB) $FB->group('Plugin - JT - Csv2Html', array('Collapsed' => false, 'Color' => '#6699CC'));
-
-		if($FB) $FB->log($context, '$context');
-		if($FB) $FB->log($article, '$article');
-		if($FB) $FB->log($params, '$params');
-		if($FB) $FB->log($limitstart, '$limitstart');
-		if($FB) $FB->log($_error, '$_error');
-		/* Pluginaufruf auslesen */
-		if($this->_patterns($article->text) === false) {
-			if($FB) $FB->groupEnd();
-			return ;
+		if (version_compare(phpversion(), '5.3', '<'))
+		{
+			return;
 		}
 
-		while($matches = each($this->_matches))
+		$_error       = ($context == 'com_content.search') ? false : true;
+		$cache        = $this->params->get('cache', 1);
+		$this->_error = $_error;
+
+		/* Pluginaufruf auslesen */
+		if ($this->_patterns($article->text) === false)
 		{
-			foreach($matches[1] as $_matches)
+			return;
+		}
+
+		while ($matches = each($this->_matches))
+		{
+			foreach ($matches[1] as $_matches)
 			{
-				$timestamp1 = microtime(true);
 				$file = JPATH_SITE . '/images/jtcsv2html/' . $_matches['fileName'] . '.csv';
 
-				if($FB) {
-					$FB->group('Aufruf der Datei ' . $_matches['fileName'] . '.csv', array('Collapsed' => true,
-					                                                                       'Color' => '#6699CC'));
-					$FB->log($file, 'Dateipfad');
-				}
+				$articleId = !empty($article->id) ? $article->id : null;
 
-				$this->_csv['cid'] = $article->id;
-				$this->_csv['file'] = $file;
+				$this->_csv['cid']      = self::getArticleId($articleId);
+				$this->_csv['file']     = $file;
 				$this->_csv['filename'] = $_matches['fileName'];
-				$this->_csv['tplname'] = $_matches['tplName'];
+				$this->_csv['tplname']  = $_matches['tplName'];
+				$this->_csv['filter']   = $_matches['filter'];
 				$this->_csv['filetime'] = (file_exists($file)) ? filemtime($file) : -1;
 
 				$this->_setTplPath();
 
-				if($this->_csv['filetime'] != -1)
+				if ($this->_csv['filetime'] != -1)
 				{
-					if($cache)
+					if ($cache)
 					{
 						$setOutput = $this->_dbChkCache();
 					}
 					else
 					{
 						$setOutput = $this->_readCsv();
-						if($setOutput) $this->_buildHtml();
+						if ($setOutput) $this->_buildHtml();
 					}
 
 					/* Plugin-Aufruf durch HTML-Ausgabe ersetzen */
-					if($setOutput)
+					if ($setOutput)
 					{
-						$article->text = str_replace($_matches['replacement'], $this->_html, $article->text);
+						$output = '<div class="jtcsv2html_wrapper">';
+
+						if ($this->_csv['filter'])
+						{
+							$output .= '<input type="text" class="search" placeholder="Type to search">';
+							JHtml::_('jquery.framework');
+							JHtml::script('plugins/content/jtcsv2html/assets/plg_jtcsv2html_search.js', false, false);
+						}
+						$output .= $this->_html;
+						$output .= '</div>';
+
+						if (!class_exists('Minify_HTML'))
+						{
+							require_once 'assets/minifyHTML.inc';
+						}
+						$output = Minify_HTML::minify($output);
+
+						$article->text = str_replace($_matches['replacement'], $output, $article->text);
 					}
 					else
 					{
-						if($_error)
+						if ($_error)
 						{
-							if($FB) $FB->warn('Fehler trotz CSV-Datei.');
-
 							$app->enqueueMessage(
-									JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', $_matches['fileName'].'.csv')
-									, 'warning'
+								JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', $_matches['fileName'] . '.csv')
+								, 'warning'
 							);
 						}
 					}
 				}
 				else
 				{
-					if($FB) $FB->warn('CSV-Datei nicht gefunden.');
-
-					if($_error) {
+					if ($_error)
+					{
 						$app->enqueueMessage(
-								JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', $_matches['fileName'].'.csv')
-								, 'warning'
+							JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', $_matches['fileName'] . '.csv')
+							, 'warning'
 						);
 					}
+
 					$this->_dbClearCache();
 				}
 				unset($this->_csv, $this->_html);
-				$timestamp2 = microtime(true);
-				$timestamp = $timestamp2-$timestamp1;
-
-				if($FB) $FB->info($timestamp, 'verbrauchte Zeit in Sek.');
-
-				if($FB) $FB->groupEnd();
 			} //endforeach
 		}
 
-		if(count($this->cssFiles) > 0) $this->_loadCSS();
-
-		$timeend = microtime(true);
-		$timetotal = $timeend-$timestart;
-
-		if($FB) $FB->info($timetotal, 'verbrauchte Zeit in Sek.');
-		if($FB) $FB->groupEnd();
-	}
-
-	public function onContentAfterSave($context, $article, $isNew)
-	{
-		$this->_onContentEvent($context, $article, $isNew);
-	}
-
-	public function onContentBeforeDelete($context, $data)
-	{
-		$this->_onContentEvent($context, $data);
-	}
-
-	protected function _onContentEvent($context, $article, $isNew=false)
-	{
-		if (version_compare(phpversion(), '5.3', '<') || $isNew) {
-			return;
-		}
-
-		$FB = $this->FB;
-		$this->_csv['cid'] = $article->id;
-
-		if($FB) $FB->group(
-				'Plugin - JT - Csv2Html => ' . __FUNCTION__ . '()'
-				, array('Collapsed' => false, 'Color' => '#6699CC')
-		);
-
-		if($FB) $FB->log($context, '$context');
-		if($FB) $FB->log($article, '$article');
-		if($FB) $FB->log($isNew, '$isNew');
-
-		$dbClearCache = $this->_dbClearCache(true);
-
-		if($FB) $FB->log($dbClearCache, '$dbClearCache');
-
-		if($FB) $FB->groupEnd();
+		if (count($this->cssFiles) > 0) $this->_loadCSS();
 	}
 
 	/**
 	 * Wertet die Pluginaufrufe aus
 	 *
-	 * @param   string  $article  der Artikeltext
+	 * @param   string $article der Artikeltext
 	 *
 	 * @return  boolean
 	 */
 	protected function _patterns($article)
 	{
-		$FB = $this->FB;
 		$return = false;
 		$_match = array();
-
-		if($FB) $FB->group(
-				__FUNCTION__ . '()'
-				, array('Collapsed' => true, 'Color' => '#6699CC')
-		);
-
-		if($FB) $FB->log($article, '$article');
 
 		$p1 = preg_match_all($this->pattern, $article, $matches1, PREG_SET_ORDER);
 		$p2 = preg_match_all($this->old_pattern, $article, $matches2, PREG_SET_ORDER);
 
-		switch(true)
+		switch (true)
 		{
 			case $p1 && $p2:
 				$matches[] = $matches1;
 				$matches[] = $matches2;
-				if($FB) $FB->log($matches1, 'Aufruf -> jtcsv2html');
-				if($FB) $FB->log($matches2, 'Aufruf -> csv2html');
 				break;
 			case $p1:
 				$matches[] = $matches1;
-				if($FB) $FB->log($matches1, 'Aufruf -> jtcsv2html');
 				break;
 			case $p2:
 				$matches[] = $matches2;
-				if($FB) $FB->log($matches2, 'Aufruf -> csv2html');
 				break;
 			default:
 				$matches = false;
 				break;
 		}
 
-		if($FB) $FB->log($matches, '$matches');
-
-		if($matches)
+		if ($matches)
 		{
-			while($match = each($matches))
+			while ($match = each($matches))
 			{
-				foreach($match[1] as $key => $value)
+				foreach ($match[1] as $key => $value)
 				{
-					if($FB) $FB->log($value, '$value');
-					$tplname = null;
+					$filter  = (boolean) $this->filter;
+					$tplname = 'default';
 
 					$_match[$key]['replacement'] = $value[0];
-					if(strpos($value[2], ','))
+
+					if (strpos($value[2], ','))
 					{
-						list($filename, $_rest) = explode(',', $value[2], 2);
-						if(strpos($_rest, ','))
+						$parameter = explode(',', $value[2], 3);
+						$filename  = trim(strtolower($parameter[0]));
+						$count     = count($parameter);
+
+						if ($count >= 2)
 						{
-							list($tplname, $rest) = explode(',', $_rest);
+							$tplname = trim(strtolower($parameter[1]));
 						}
-						elseif ($_rest != "")
+
+						if ($count == 3)
 						{
-							$tplname = $_rest;
+							if (trim(strtolower($parameter[2])) == 'on')
+							{
+								$filter = true;
+							}
+							elseif (trim(strtolower($parameter[2])) == 'off')
+							{
+								$filter = false;
+							}
 						}
 					}
 					else
 					{
 						$filename = $value[2];
 					}
-					$_match[$key]['fileName'] = trim($filename);
-					$_match[$key]['tplName'] = ($tplname) ? trim($tplname) : trim($filename);
+
+					$_match[$key]['fileName'] = $filename;
+					$_match[$key]['tplName']  = $tplname;
+					$_match[$key]['filter']   = $filter;
 				}
 
 				$this->_matches[] = $_match;
-				$return = true;
+				$return           = true;
 			}
-		}
-
-		if($FB) {
-			$FB->log($this->_matches, '$this->_matches');
-			$FB->log($return, '$return');
-
-			if($return) {
-				$FB->info(__FUNCTION__ . '() => wurde ordnungsgemäß ausgeführt');
-			}
-			else {
-				$FB->warn('Probleme beim Identifizieren des Pluginaufrufes in der Methode "_patterns"');
-			}
-
-			$FB->groupEnd();
 		}
 
 		return $return;
-
 	}
 
 	protected function _setTplPath()
 	{
-		$FB = $this->FB;
-		if($FB) $FB->group(__FUNCTION__.'()', array('Collapsed' => true, 'Color' => '#6699CC'));
-
-		$plgName = $this->_name;
-		$plgType = $this->_type;
+		$plgName  = $this->_name;
+		$plgType  = $this->_type;
 		$template = JFactory::getApplication()->getTemplate();
 
-		$tpl['tpl'] = 'images/jtcsv2html/';
-		$tpl['tplPlg'] = 'templates/'.$template.'/html/plg_'.$plgType.'_'.$plgName.'/';
-        $tpl['plg'] = 'plugins/'.$plgType.'/'.$plgName.'/tmpl/';
-		$tpl['tplDefault'] = 'images/jtcsv2html/default';
-		$tpl['tplPlgDefault'] = 'templates/'.$template.'/html/plg_'.$plgType.'_'.$plgName.'/default';
-		$tpl['default'] = 'plugins/'.$plgType.'/'.$plgName.'/tmpl/default';
+		$tpl['tpl']           = 'images/jtcsv2html/';
+		$tpl['tplPlg']        = 'templates/' . $template . '/html/plg_' . $plgType . '_' . $plgName . '/';
+		$tpl['plg']           = 'plugins/' . $plgType . '/' . $plgName . '/tmpl/';
+		$tpl['tplDefault']    = 'images/jtcsv2html/default';
+		$tpl['tplPlgDefault'] = 'templates/' . $template . '/html/plg_' . $plgType . '_' . $plgName . '/default';
+		$tpl['default']       = 'plugins/' . $plgType . '/' . $plgName . '/tmpl/default';
 
-		if($FB) $FB->info($tpl, '$theme');
-
-		switch(true)
+		switch (true)
 		{
-			case file_exists(JPATH_SITE.'/'.$tpl['tpl'].$this->_csv['tplname'].'.php'):
-				$tplPath = JPATH_SITE.'/'.$tpl['tpl'].$this->_csv['tplname'].'.php';
+			case file_exists(JPATH_SITE . '/' . $tpl['tplPlg'] . $this->_csv['tplname'] . '.php'):
+				$tplPath = JPATH_SITE . '/' . $tpl['tplPlg'] . $this->_csv['tplname'] . '.php';
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['tplPlg'].$this->_csv['tplname'].'.php'):
-				$tplPath = JPATH_SITE.'/'.$tpl['tplPlg'].$this->_csv['tplname'].'.php';
+			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['tplname'] . '.php'):
+				$tplPath = JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['tplname'] . '.php';
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['plg'].$this->_csv['tplname'].'.php'):
-				$tplPath = JPATH_SITE.'/'.$tpl['plg'].$this->_csv['tplname'].'.php';
+			case file_exists(JPATH_SITE . '/' . $tpl['plg'] . $this->_csv['tplname'] . '.php'):
+				$tplPath = JPATH_SITE . '/' . $tpl['plg'] . $this->_csv['tplname'] . '.php';
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['tplDefault'].'.php'):
-				$tplPath = JPATH_SITE.'/'.$tpl['tplDefault'].'.php';
+			case file_exists(JPATH_SITE . '/' . $tpl['tplPlgDefault'] . '.php'):
+				$tplPath = JPATH_SITE . '/' . $tpl['tplPlgDefault'] . '.php';
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['tplPlgDefault'].'.php'):
-				$tplPath = JPATH_SITE.'/'.$tpl['tplPlgDefault'].'.php';
+			case file_exists(JPATH_SITE . '/' . $tpl['tplDefault'] . '.php'):
+				$tplPath = JPATH_SITE . '/' . $tpl['tplDefault'] . '.php';
 				break;
 			default:
-				$tplPath = JPATH_SITE.'/'.$tpl['default'].'.php';
+				$tplPath = JPATH_SITE . '/' . $tpl['default'] . '.php';
 				break;
 		}
-
-		if($FB) $FB->log($tplPath, '$tplPath');
 
 		$cssFile = 'default';
-		switch(true)
+		switch (true)
 		{
-			case file_exists(JPATH_SITE.'/'.$tpl['tpl'].$this->_csv['filename'].'.css'):
-				$cssPath = JURI::root().$tpl['tpl'].$this->_csv['filename'].'.css';
+			case file_exists(JPATH_SITE . '/' . $tpl['tplPlg'] . $this->_csv['filename'] . '.css'):
+				$cssPath = JURI::root() . $tpl['tplPlg'] . $this->_csv['filename'] . '.css';
 				$cssFile = $this->_csv['filename'];
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['tplPlg'].$this->_csv['filename'].'.css'):
-				$cssPath = JURI::root().$tpl['tplPlg'].$this->_csv['filename'].'.css';
+			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['filename'] . '.css'):
+				$cssPath = JURI::root() . $tpl['tpl'] . $this->_csv['filename'] . '.css';
 				$cssFile = $this->_csv['filename'];
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['plg'].$this->_csv['tplname'].'.css'):
-				$cssPath = JURI::root().$tpl['plg'].$this->_csv['tplname'].'.css';
+			case file_exists(JPATH_SITE . '/' . $tpl['tplPlg'] . $this->_csv['tplname'] . '.css'):
+				$cssPath = JURI::root() . $tpl['tplPlg'] . $this->_csv['tplname'] . '.css';
 				$cssFile = $this->_csv['tplname'];
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['tplPlg'].$this->_csv['tplname'].'.css'):
-				$cssPath = JURI::root().$tpl['tplPlg'].$this->_csv['tplname'].'.css';
+			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . $this->_csv['tplname'] . '.css'):
+				$cssPath = JURI::root() . $tpl['tpl'] . $this->_csv['tplname'] . '.css';
 				$cssFile = $this->_csv['tplname'];
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['tplDefault'].'.css'):
-				$cssPath = JURI::root().$tpl['tplDefault'].'.css';
+			case file_exists(JPATH_SITE . '/' . $tpl['plg'] . $this->_csv['tplname'] . '.css'):
+				$cssPath = JURI::root() . $tpl['plg'] . $this->_csv['tplname'] . '.css';
+				$cssFile = $this->_csv['tplname'];
 				break;
-			case file_exists(JPATH_SITE.'/'.$tpl['tplPlgDefault'].'.css'):
-				$cssPath = JURI::root().$tpl['tplPlgDefault'].'.css';
+			case file_exists(JPATH_SITE . '/' . $tpl['tplPlgDefault'] . '.css'):
+				$cssPath = JURI::root() . $tpl['tplPlgDefault'] . '.css';
+				break;
+			case file_exists(JPATH_SITE . '/' . $tpl['tplDefault'] . '.css'):
+				$cssPath = JURI::root() . $tpl['tplDefault'] . '.css';
 				break;
 			default:
-				$cssPath = JURI::root().$tpl['default'].'.css';
+				$cssPath = JURI::root() . $tpl['default'] . '.css';
 				break;
 		}
 
-		$this->_csv['tplPath'] = $tplPath;
+		$this->_csv['tplPath']    = $tplPath;
 		$this->cssFiles[$cssFile] = $cssPath;
-
-		if($FB) $FB->log($cssPath, '$cssPath');
-		if($FB) $FB->log($this->cssFiles, '$this->cssFiles');
-
-		if($FB) {
-			$FB->info(__FUNCTION__.'() => wurde ordnungsgemäß ausgeführt');
-			$FB->groupEnd();
-		}
 	}
 
 	protected function _dbChkCache()
 	{
-		$FB = $this->FB;
 		$db = JFactory::getDBO();
 		$cid = $this->_csv['cid'];
+
+		if (empty($cid))
+		{
+			return;
+		}
+
 		$filename = $this->_csv['filename'];
-		$tplname = $this->_csv['tplname'];
+		$tplname  = $this->_csv['tplname'];
 		$filetime = $this->_csv['filetime'];
 		$dbAction = null;
-		$query = $db->getQuery(true);
-
-		if($FB) $FB->group(__FUNCTION__ . '()', array('Collapsed' => false, 'Color' => '#6699CC'));
+		$query    = $db->getQuery(true);
 
 		$query->clear();
 		$query->select('filetime, id');
@@ -418,18 +387,16 @@ class plgContentJtcsv2html extends JPlugin
 		$query->where('tplname=' . $db->quote($tplname));
 
 		$db->setQuery($query);
-		$result = $db->loadAssoc();
+		$result     = $db->loadAssoc();
 		$dbFiletime = $result['filetime'];
-		$id = $result['id'];
+		$id         = $result['id'];
 
-		if($FB) $FB->info($dbFiletime, '$dbFiletime');
-		if($FB) $FB->info($id, '$id');
+		if ($dbFiletime !== null)
+		{
+			$dbAction = (($filetime - $dbFiletime) <= 0) ? 'load' : 'update';
+		}
 
-		if($dbFiletime !== NULL) $dbAction = (($filetime - $dbFiletime) <= 0) ? 'load' : 'update';
-
-		if($FB) $FB->info($dbAction, '$dbAction');
-
-		switch(true)
+		switch (true)
 		{
 			case ($dbAction == 'load'):
 				$return = $this->_dbLoadCache();
@@ -439,13 +406,7 @@ class plgContentJtcsv2html extends JPlugin
 				break;
 			default:
 				$return = $this->_dbSaveCache();
-		}
-
-
-		if($FB) {
-			$FB->log($return, '$return');
-			$FB->info(__FUNCTION__ . '() => wurde ordnungsgemäß ausgeführt');
-			$FB->groupEnd();
+				break;
 		}
 
 		return $return;
@@ -453,16 +414,19 @@ class plgContentJtcsv2html extends JPlugin
 
 	protected function _dbLoadCache()
 	{
-		$FB = $this->FB;
 		$return = false;
 		$cid = $this->_csv['cid'];
-		$db = JFactory::getDBO();
+
+		if (empty($cid))
+		{
+			return;
+		}
+
+		$db    = JFactory::getDBO();
 		$query = $db->getQuery(true);
 
-		if($FB) $FB->group(__FUNCTION__ . '()', array('Collapsed' => false, 'Color' => '#6699CC'));
-
 		$filename = $this->_csv['filename'];
-		$tplname = $this->_csv['tplname'];
+		$tplname  = $this->_csv['tplname'];
 
 		$query->clear();
 		$query->select('datas');
@@ -474,24 +438,10 @@ class plgContentJtcsv2html extends JPlugin
 		$db->setQuery($query);
 		$result = $db->loadResult();
 
-		if($FB) $FB->log($result, '$result');
-
-		if($result !== NULL) {
+		if ($result !== null)
+		{
 			$this->_html = $result;
-			$return = TRUE;
-		}
-
-		if($FB) {
-			$FB->log($return, '$return');
-
-			if($return) {
-				$FB->info(__FUNCTION__.'() => wurde ordnungsgemäß ausgeführt.');
-			}
-			else {
-				$FB->warn(__FUNCTION__.'() => Daten konnten nicht gelesen werden.');
-			}
-
-			$FB->groupEnd();
+			$return      = true;
 		}
 
 		return $return;
@@ -499,20 +449,22 @@ class plgContentJtcsv2html extends JPlugin
 
 	protected function _dbUpdateCache($id)
 	{
-		$FB = $this->FB;
 		$return = false;
 		$cid = $this->_csv['cid'];
-		$filename = $this->_csv['filename'];
-		$tplname = $this->_csv['tplname'];
-		$filetime = $this->_csv['filetime'];
-		$db = JFactory::getDBO();
-		$query = $db->getQuery(true);
 
-		if($FB) {
-			$FB->group(__FUNCTION__ . '()', array('Collapsed' => true, 'Color' => '#6699CC'));
+		if (empty($cid))
+		{
+			return;
 		}
 
-		if($this->_readCsv()) {
+		$filename = $this->_csv['filename'];
+		$tplname  = $this->_csv['tplname'];
+		$filetime = $this->_csv['filetime'];
+		$db       = JFactory::getDBO();
+		$query    = $db->getQuery(true);
+
+		if ($this->_readCsv())
+		{
 			$this->_buildHtml();
 
 			$query->update('#__jtcsv2html');
@@ -529,85 +481,147 @@ class plgContentJtcsv2html extends JPlugin
 			$return = ($dbFile) ? true : false;
 		}
 
-		if($FB) {
-			$FB->log($return, '$return');
+		return $return;
+	}
 
-			if($return) {
-				$FB->info(__FUNCTION__ . '() => wurde ordnungsgemäß ausgeführt.');
-			}
-			else {
-				$FB->warn(__FUNCTION__ . '() => Datenbank konnte nicht aktualisiert werden.');
-			}
+	protected function _readCsv()
+	{
+		$return = false;
+		$csv    = &$this->_csv;
+		$file   = $csv['file'];
 
-			$FB->groupEnd();
+		if ($this->delimiter == 'null')
+		{
+			$this->delimiter = ' ';
 		}
+
+		if ($this->delimiter == '\t')
+		{
+			$this->delimiter = "\t";
+		}
+
+		if (version_compare(phpversion(), '5.3', '<'))
+		{
+			if (file_exists($file) || is_readable($file))
+			{
+				$data = array();
+
+				if (($handle = fopen($file, 'r')) !== false)
+				{
+					$filesize = filesize($file);
+
+					while (($row = fgetcsv($handle, $filesize, $this->delimiter, $this->enclosure)) !== false)
+					{
+						array_walk($row,
+							function (&$entry)
+							{
+								$enc   = mb_detect_encoding($entry, "UTF-8,ISO-8859-1,WINDOWS-1252");
+								$entry = ($enc == 'UTF-8') ? trim($entry) : trim(iconv($enc, 'UTF-8', $entry));
+							}
+						);
+
+						$setDatas = false;
+
+						foreach ($row as $value)
+						{
+							if ($value != '') $setDatas = true;
+						}
+
+						if ($setDatas) $data[] = $row;
+					} //endwhile
+
+					fclose($handle);
+
+					$csv['datas'] = $data;
+					$return       = true;
+				} //endfopen
+			} //end file_exist
+		}
+		else
+		{
+			if (file_exists($file) || is_readable($file))
+			{
+				$csvArray = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+				foreach ($csvArray as &$row)
+				{
+					$row = str_getcsv($row, $this->delimiter, "$this->enclosure");
+
+					array_walk($row,
+						function (&$entry)
+						{
+							$enc   = mb_detect_encoding($entry, "UTF-8,ISO-8859-1,WINDOWS-1252");
+							$entry = ($enc == 'UTF-8') ? trim($entry) : trim(iconv($enc, 'UTF-8', $entry));
+						}
+					);
+				} //endforeach
+
+				$csv['datas'] = $csvArray;
+				$return       = true;
+			} //end file_exist
+		} //endif phpversion
 
 		return $return;
 	}
 
+	protected function _buildHtml()
+	{
+		ob_start();
+		require $this->_csv['tplPath'];
+
+		$this->_html = ob_get_clean();
+	}
+
 	protected function _dbSaveCache()
 	{
-		$FB = $this->FB;
 		$return = false;
 		$cid = $this->_csv['cid'];
+
+		if (empty($cid))
+		{
+			return;
+		}
+
 		$filename = $this->_csv['filename'];
-		$tplname = $this->_csv['tplname'];
+		$tplname  = $this->_csv['tplname'];
 		$filetime = $this->_csv['filetime'];
-		$db = JFactory::getDBO();
-		$query = $db->getQuery(true);
+		$db       = JFactory::getDBO();
+		$query    = $db->getQuery(true);
 
-		if($FB) $FB->group(__FUNCTION__ . '()', array('Collapsed' => true, 'Color' => '#6699CC'));
-
-		if($this->_readCsv())
+		if ($this->_readCsv())
 		{
 			$this->_buildHtml();
 			$query->clear();
 			$columns = 'cid, filename, tplname, filetime, datas';
-			$values = $db->quote($cid)
-			          . ',' . $db->quote($filename)
-			          . ',' . $db->quote($tplname)
-			          . ',' . $db->quote($filetime)
-			          . ',' . $db->quote($this->_html);
+			$values  = $db->quote($cid)
+				. ',' . $db->quote($filename)
+				. ',' . $db->quote($tplname)
+				. ',' . $db->quote($filetime)
+				. ',' . $db->quote($this->_html);
 
 			$query->insert($db->quoteName('#__jtcsv2html'));
 			$query->columns($columns);
 			$query->values($values);
 			$db->setQuery($query);
 
-			if($FB) $FB->log((string)$db->getQuery(), '$db->getQuery()');
-
 			$return = $db->execute();
-		}
-
-		if($FB) {
-			$FB->log($return, '$return');
-
-			if($return) {
-				$FB->info(__FUNCTION__ . '() => wurde ordnungsgemäß ausgeführt.');
-			} else {
-				$FB->warn(__FUNCTION__ . '() => fehler beim Speichern in der Datenbank.');
-			}
-
-			$FB->groupEnd();
 		}
 
 		return $return;
 	}
 
-	protected function _dbClearCache($onSave=false)
+	protected function _dbClearCache($onSave = false)
 	{
-		$FB = $this->FB;
-		$db = JFactory::getDBO();
-		$cid = $this->_csv['cid'];
+		$db       = JFactory::getDBO();
+		$cid      = $this->_csv['cid'];
 		$filename = $this->_csv['filename'];
-		$tplname = $this->_csv['tplname'];
+//		$tplname  = $this->_csv['tplname'];
 		$query = $db->getQuery(true);
-
-		if($FB) $FB->group(__FUNCTION__ . '()', array('Collapsed' => false, 'Color' => '#6699CC'));
 
 		$query->clear();
 		$query->delete('#__jtcsv2html');
-		if(!$onSave)
+
+		if (!$onSave)
 		{
 			$query->where('filename=' . $db->quote($filename));
 //			$query->where('tplname=' . $db->quote($tplname));
@@ -620,200 +634,42 @@ class plgContentJtcsv2html extends JPlugin
 		$db->setQuery($query);
 		$return = $db->execute();
 
-		if($FB) $FB->log((string)$db->getQuery(), '$query');
-
-
 		$query->clear();
 		$db->setQuery('OPTIMIZE TABLE #__jtcsv2html_data');
-		$optimize = $db->execute();
-
-		if($FB) {
-			$FB->info($return, 'Datenbank bereinigt');
-			$FB->info($optimize, 'Datenbank optimiert');
-			$FB->groupEnd();
-		}
+		$db->execute();
 
 		return $return;
 	}
 
 	protected function _loadCSS()
 	{
-		$FB = $this->FB;
 		$cssFiles = $this->cssFiles;
-		if($FB) $FB->group(__FUNCTION__.'()', array('Collapsed' => true, 'Color' => '#6699CC'));
 
-		foreach($cssFiles as $cssFile) {
+		foreach ($cssFiles as $cssFile)
+		{
 			$document = JFactory::getDocument();
 			$document->addStyleSheet($cssFile, 'text/css');
-			if($FB) $FB->log($cssFile, '$cssFile');
-		}
-
-		if($FB) {
-			$FB->info(__FUNCTION__.'() => wurde ordnungsgemäß ausgeführt');
-			$FB->groupEnd();
 		}
 	}
 
-	protected function _readCsv()
+	public function onContentAfterSave($context, $article, $isNew)
 	{
-		$FB = $this->FB;
-		$return = false;
-		$csv = &$this->_csv;
-		$file = $csv['file'];
-		if($this->delimiter == 'null') $this->delimiter = ' ';
-		if($this->delimiter == '\t') $this->delimiter = "\t";
+		$this->_onContentEvent($context, $article, $isNew);
+	}
 
-		if($FB) {
-			$FB->group(__FUNCTION__.'()', array('Collapsed' => true, 'Color' => '#6699CC'));
-			$FB->info($this->delimiter, '$this->delimiter');
-			$FB->info($this->enclosure, '$this->enclosure');
-		}
-
-		if (version_compare(phpversion(), '5.3', '<'))
+	protected function _onContentEvent($context, $article, $isNew = false)
+	{
+		if (version_compare(phpversion(), '5.3', '<') || $isNew)
 		{
-			if($FB) $FB->info('CSV-Daten aufbereiten in PHP-Version < 5.3');
-
-			if(file_exists($file) || is_readable($file))
-			{
-				$data = array();
-
-				if(($handle = fopen($file, 'r')) !== false)
-				{
-					$filesize = filesize($file);
-
-					while(($row = fgetcsv($handle, $filesize, $this->delimiter, $this->enclosure)) !== false)
-					{
-						array_walk($row,
-								function (&$entry) {
-									$enc = mb_detect_encoding($entry, "UTF-8,ISO-8859-1,WINDOWS-1252");
-									$entry = ($enc == 'UTF-8') ? trim($entry) : trim(iconv($enc, 'UTF-8', $entry));
-								}
-						);
-
-						$setDatas = false;
-
-						foreach($row as $value) {
-							if($value != '') $setDatas = true;
-						}
-
-						if($setDatas) $data[] = $row;
-					} //endwhile
-
-					fclose($handle);
-
-					$csv['datas'] = $data;
-					$return = true;
-
-					if($FB) $FB->log($csv['datas'], '$csv["datas"]');
-				} //endfopen
-			} //end file_exist
-		}
-		else
-		{
-			if($FB) $FB->info('CSV-Daten aufbereiten in PHP-Version >= 5.3');
-
-			if(file_exists($file) || is_readable($file))
-			{
-				$csvArray = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-
-				if($FB) $FB->log($csvArray, '$csvArray');
-
-				foreach($csvArray as &$row)
-				{
-					$row = str_getcsv($row, $this->delimiter, "$this->enclosure");
-
-					array_walk($row,
-							function (&$entry) {
-								$enc = mb_detect_encoding($entry, "UTF-8,ISO-8859-1,WINDOWS-1252");
-								$entry = ($enc == 'UTF-8') ? trim($entry) : trim(iconv($enc, 'UTF-8', $entry));
-							}
-					);
-				} //endforeach
-
-				$csv['datas'] = $csvArray;
-				$return = true;
-
-				if($FB) $FB->log($csv['datas'], '$csv["datas"]');
-			} //end file_exist
-		} //endif phpversion
-
-		if($FB) {
-			$FB->log($return, '$return');
-
-			if($return) {
-				$FB->info(__FUNCTION__ . '() => wurde ordnungsgemäß ausgeführt.');
-			}
-			else {
-				$FB->warn(__FUNCTION__ . '() => Datei konnte nicht gefunden werden, oder war nicht lesbar.');
-			}
-
-			$FB->groupEnd();
+			return;
 		}
 
-		return $return;
+		$this->_csv['cid'] = $article->id;
+		$this->_dbClearCache(true);
 	}
 
-	protected function _buildHtml()
+	public function onContentBeforeDelete($context, $data)
 	{
-		$FB = $this->FB;
-		if($FB) $FB->group(__FUNCTION__.'()', array('Collapsed' => true, 'Color' => '#6699CC'));
-
-		ob_start();
-		require $this->_csv['tplPath'];
-
-		$output = ob_get_clean();
-
-		if($FB) $FB->log($output, '$output');
-
-		if(!class_exists('Minify_HTML')) {
-			require_once 'assets/minifyHTML.inc';
-		}
-		$this->_html = Minify_HTML::minify($output);
-
-		if($FB) {
-			$FB->info(__FUNCTION__.'() => wurde ordnungsgemäß ausgeführt');
-			$FB->groupEnd();
-		}
-	}
-
-	protected function _dbClearAll()
-	{
-		$FB = $this->FB;
-		$db = JFactory::getDBO();
-		$query = $db->getQuery(true);
-
-		// Zuruecksetzen des Parameters
-		$this->params->set('clearDB', 0);
-		$params = $this->params->toString();
-		$plgName = $this->_name;
-
-		if($FB) {
-			$FB->log($plgName, '$plgName');
-			$FB->log($params, '$params');
-		}
-
-		$query->clear();
-		$query->update('#__extensions');
-		$query->set('params=' . $db->quote($params));
-		$query->where('name=' . $db->quote('PLG_CONTENT_JTCSV2HTML'));
-
-		$db->setQuery($query);
-		$q1 = $db->execute();
-
-		// Loeschen aller Daten aus der Datenbank
-		$query->clear();
-		$db->setQuery('TRUNCATE #__jtcsv2html');
-		$q2 = $db->execute();
-
-		$query->clear();
-		$db->setQuery('OPTIMIZE TABLE #__jtcsv2html');
-		if($FB) $FB->info((string)$db->getQuery(), '$db->getQuery()');
-		$q3 = $db->execute();
-
-		if($FB) {
-			$FB->log($q1, 'Plugin-Einstellung zurückgesetzt');
-			$FB->log($q2, 'Datenbank bereinigt');
-			$FB->log($q3, 'Datenbank optimiert');
-		}
+		$this->_onContentEvent($context, $data);
 	}
 }

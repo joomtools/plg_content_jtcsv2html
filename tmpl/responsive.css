@@ -17,65 +17,88 @@
  *  GNU General Public License for more details.
  */
 
+.jtcsv2html_wrapper {
+	margin: 2em 0;
+}
+.jtcsv2html_wrapper table.responsive tr {
+	border-top: 1px solid #46627f;
+	border-bottom: 1px solid #46627f;
+}
 
-.jtcsv2html_wrapper .responsive-table {
-  margin: 1em 0;
-  min-width: 300px;
+.jtcsv2html_wrapper table.responsive tr:first-child,
+.jtcsv2html_wrapper table.responsive tbody tr:last-child {
+	border: none;
 }
-.jtcsv2html_wrapper .responsive-table tr {
-  border-top: 1px solid #ddd;
-  border-bottom: 1px solid #ddd;
+
+.jtcsv2html_wrapper table.responsive th {
+	display: none;
 }
-.jtcsv2html_wrapper .responsive-table th {
-  display: none;
+
+.jtcsv2html_wrapper table.responsive td {
+	display: block;
 }
-.jtcsv2html_wrapper .responsive-table td {
-  display: block;
+
+.jtcsv2html_wrapper table.responsive td:first-child {
+	padding-top: .5em;
 }
-.jtcsv2html_wrapper .responsive-table td:first-child {
-  padding-top: .5em;
+
+.jtcsv2html_wrapper table.responsive td:last-child {
+	padding-bottom: .5em;
 }
-.jtcsv2html_wrapper .responsive-table td:last-child {
-  padding-bottom: .5em;
+
+.jtcsv2html_wrapper table.responsive td:before {
+	content: attr(data-th) ": ";
+	font-weight: bold;
+	width: 6.5em;
+	display: inline-block;
 }
-.jtcsv2html_wrapper .responsive-table td:before {
-  content: attr(data-th) ": ";
-  font-weight: bold;
-  width: 6.5em;
-  display: inline-block;
+
+.jtcsv2html_wrapper table.responsive th,
+.jtcsv2html_wrapper table.responsive td {
+	text-align: left;
 }
-.jtcsv2html_wrapper .responsive-table th, .jtcsv2html_wrapper .responsive-table td {
-  text-align: left;
+
+.jtcsv2html_wrapper table.responsive {
+	background: #34495E;
+	color: #fff;
+	border-radius: .4em;
+	overflow: hidden;
 }
-.jtcsv2html_wrapper .responsive-table {
-  background: #34495E;
-  color: #fff;
-  border-radius: .4em;
-  overflow: hidden;
+
+
+.jtcsv2html_wrapper table.responsive th,
+.jtcsv2html_wrapper table.responsive td {
+	margin: .5em 1em;
 }
-.jtcsv2html_wrapper .responsive-table tr {
-  border-color: #46627f;
-}
-.jtcsv2html_wrapper .responsive-table th, .jtcsv2html_wrapper .responsive-table td {
-  margin: .5em 1em;
-}
-.jtcsv2html_wrapper .responsive-table th, .jtcsv2html_wrapper .responsive-table td:before {
-  color: #dd5;
+
+.jtcsv2html_wrapper table.responsive th,
+.jtcsv2html_wrapper table.responsive td:before {
+	color: #dd5;
 }
 
 @media (min-width: 480px) {
-  .jtcsv2html_wrapper .responsive-table td:before {
-    display: none;
-  }
-  .jtcsv2html_wrapper .responsive-table th, .jtcsv2html_wrapper .responsive-table td {
-    display: table-cell;
-    /*padding: .25em .5em;*/
-    padding: 1em !important;
-  }
-  .jtcsv2html_wrapper .responsive-table th:first-child, .jtcsv2html_wrapper .responsive-table td:first-child {
-    padding-left: 0;
-  }
-  .jtcsv2html_wrapper .responsive-table th:last-child, .jtcsv2html_wrapper .responsive-table td:last-child {
-    padding-right: 0;
-  }
+	.jtcsv2html_wrapper table.responsive td:before {
+		display: none;
+	}
+
+	.jtcsv2html_wrapper table.responsive tbody tr:first-child {
+		border-top: 1px solid #46627f;
+	}
+
+	.jtcsv2html_wrapper table.responsive th,
+	.jtcsv2html_wrapper table.responsive td {
+		display: table-cell;
+		/*padding: .25em .5em;*/
+		padding: 1em !important;
+	}
+
+	.jtcsv2html_wrapper table.responsive th:first-child,
+	.jtcsv2html_wrapper table.responsive td:first-child {
+		padding-left: 0;
+	}
+
+	.jtcsv2html_wrapper table.responsive th:last-child,
+	.jtcsv2html_wrapper table.responsive td:last-child {
+		padding-right: 0;
+	}
 }
