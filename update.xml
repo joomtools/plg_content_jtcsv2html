@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<updates>
+	<update>
+		<name>JT - Csv2Html</name>
+		<description></description>
+		<element>jtcsv2html</element>
+		<type>plugin</type>
+		<folder>content</folder>
+		<client>site</client>
+		<version>3.0.1</version>
+		<downloads>
+			<downloadurl type="full" format="zip">https://github.com/JoomTools/plg_content_jtcsv2html/releases/download/3.0.1/plg_content_jtcsv2html-3.0.1.zip</downloadurl>
+		</downloads>
+		<maintainer>Guido De Gobbis</maintainer>
+		<targetplatform name="joomla" version="3.[89]"/>
+	</update>
+</updates>
