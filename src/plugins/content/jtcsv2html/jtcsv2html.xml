@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension type="plugin" group="content" version="3" method="upgrade">
 	<name>PLG_CONTENT_JTCSV2HTML</name>
-	<creationDate>2017-09-23</creationDate>
+	<creationDate>##DATE##</creationDate>
 	<author>Guido De Gobbis</author>
 	<authorEmail>support@joomtools.de</authorEmail>
 	<authorUrl>www.joomtools.de</authorUrl>
-	<copyright>Copyright (C) 2016 JoomTools.de. All rights reserved.</copyright>
+	<copyright>Copyright (C) ##YEAR## JoomTools.de. All rights reserved.</copyright>
 	<license>GPL v3</license>
-	<version>3.0.0</version>
+	<version>##VERSION##</version>
 	<description>PLG_CONTENT_JTCSV2HTML_XML_DESCRIPTION</description>
 
 	<files>
@@ -17,8 +17,6 @@
 		<folder>sql</folder>
 		<file plugin="jtcsv2html">jtcsv2html.php</file>
 		<file>jtcsv2html.scriptfile.php</file>
-		<file>LICENSE</file>
-		<file>README.md</file>
 		<file>jtcsv2html.xml</file>
 	</files>
 
@@ -97,7 +95,7 @@
 	</config>
 
 	<updateservers>
-		<server type="extension" priority="1" name="PLG_CONTENT_JTCSV2HTML">https://raw.githubusercontent.com/JoomTools/updateserver/master/plg_content_jtcsv2html.xml</server>
+		<server type="extension" priority="1" name="PLG_CONTENT_JTCSV2HTML">https://raw.githubusercontent.com/JoomTools/plg_content_jtcsv2html/master/update.xml</server>
 	</updateservers>
 
 </extension>
