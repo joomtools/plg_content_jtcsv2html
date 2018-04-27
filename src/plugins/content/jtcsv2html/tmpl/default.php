@@ -17,28 +17,28 @@
  *  GNU General Public License for more details.
  */
 
-
 // no direct access
 defined('_JEXEC') or die;
+extract($displayData);
 ?>
-<table class="<?php echo $this->_csv['filename']; ?> <?php echo $this->_csv['tplname']; ?>">
+<table class="<?php echo $csv['fileName']; ?> <?php echo $csv['tplName']; ?>">
 	<thead>
 	<tr>
 		<?php // erstellen der Kopfzeile
-		foreach ($this->_csv['datas'][0] as $hKey => $headline) : ?>
+		foreach ($csv['content'][0] as $hKey => $headline) : ?>
 			<th class="csvcol<?php echo($hKey + 1); ?>"><?php echo $headline; ?></th>
 		<?php endforeach; ?>
 	</tr>
 	</thead>
 	<tbody>
 	<?php // erstellen des Tabelleninhalts
-	if (array_key_exists('1', $this->_csv['datas']) === false)
+	if (array_key_exists('1', $csv['content']) === false)
 	{
-		$this->_csv['datas'][0] = array(false);
+		$csv['content'][0] = array(false);
 	}
 
 	// erstellen der Datenzeilen
-	foreach ($this->_csv['datas'] as $dKey => $datas) :
+	foreach ($csv['content'] as $dKey => $datas) :
 		if ($dKey == 0)
 		{
 			$datasCount = count($datas);

@@ -35,7 +35,7 @@
 
 	<uninstall>
 		<sql>
-			<file driver="mysql" charset="utf8">sql/uninstall.mysql.utf8.sql</file>
+			<file driver="mysql" charset="utf8">sql/uninstall.mysql.sql</file>
 		</sql>
 	</uninstall>
 
@@ -68,8 +68,8 @@
 				       default="0"
 				       label="PLG_CONTENT_JTCSV2HTML_FILTER"
 				       description="PLG_CONTENT_JTCSV2HTML_FILTER_DESC">
-					<option value="1">JYES</option>
-					<option value="0">JNO</option>
+					<option value="on">JYES</option>
+					<option value="off">JNO</option>
 				</field>
 				<field name="cache"
 				       type="radio"
