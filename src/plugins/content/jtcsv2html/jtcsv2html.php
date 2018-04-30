@@ -1,48 +1,51 @@
 <?php
 /**
- * @Copyright  JoomTools
- * @package    JT - Csv2Html - Plugin for Joomla! 3.x
- * @author     Guido De Gobbis
- * @link       http://www.joomtools.de
+ * @package      Joomla.Plugin
+ * @subpackage   Content.Jtcsv2html
  *
- * @license    GNU/GPL v3 <http://www.gnu.org/licenses/>
- *             This program is free software: you can redistribute it and/or modify
- *             it under the terms of the GNU General Public License as published by
- *             the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * @author       Guido De Gobbis <support@joomtools.de>
+ * @copyright    (c) 2018 JoomTools.de - All rights reserved.
+ * @license      GNU General Public License version 3 or later
  */
 
 // no direct access
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Layout\FileLayout;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Profiler\Profiler;
 
+/**
+ * Class plgContentJtcsv2html
+ */
 class plgContentJtcsv2html extends CMSPlugin
 {
 	const PLUGIN_REGEX = '@(<(\w+)[^>]*>)?{jtcsv2html (.*)}(</\\2>)?@';
 	const PLUGIN_REGEX_OLD = '@(<(\w+)[^>]*>)?{csv2html (.*)}(</\\2>)?@';
-	private static $articleId;
 	protected $app;
 	protected $autoloadLanguage = true;
+	private $layoutPath = [];
+	private $articleId;
+	private static $csv = [];
+	private static $cids = [];
+	private $cssFiles = [];
 	private $delimiter = null;
 	private $enclosure = null;
 	private $filter = null;
-	private $cssFiles = [];
-	private $_error = null;
-	private $_matches = [];
-	private $_csv = [];
 	private $_html = '';
 
 	public function __construct(&$subject, $params)
 	{
 		parent::__construct($subject, $params);
+
+		$template         = $this->app->getTemplate();
+		$this->layoutPath = array(
+			JPATH_SITE . '/images/jtcsv2html',
+			JPATH_SITE . '/templates/' . $template . '/html/plg_' . $this->_type . '_' . $this->_name,
+			JPATH_SITE . '/plugins/' . $this->_type . '/' . $this->_name . '/tmpl',
+		);
 
 		if ($this->app->isClient('administrator'))
 		{
@@ -53,7 +56,7 @@ class plgContentJtcsv2html extends CMSPlugin
 		}
 	}
 
-	protected function _dbClearAll()
+	private function _dbClearAll()
 	{
 		$db    = Factory::getDBO();
 		$query = $db->getQuery(true);
@@ -76,117 +79,123 @@ class plgContentJtcsv2html extends CMSPlugin
 		$db->execute();
 
 		// Loeschen aller Daten aus der Datenbank
-		$db->setQuery('TRUNCATE ' . $db->quoteName('#__jtcsv2html'));
+		$db->truncateTable('#__jtcsv2html');
+		$db->truncateTable('#__jtcsv2html_assoc');
 		$db->execute();
 
-		$db->setQuery('OPTIMIZE TABLE ' . $db->quoteName('#__jtcsv2html'));
+		$db->setQuery('OPTIMIZE TABLE ' . $db->quoteName('#__jtcsv2html') . ', ' . $db->quoteName('#__jtcsv2html_assoc'));
 		$db->execute();
 	}
 
-	public function onContentPrepare($context, &$article, &$params, $limitstart = 0)
+	/**
+	 * Set CSS and database associations
+	 *
+	 * @param   string  $context  The context of the content being passed to the plugin
+	 * @param   object  &$article The article object
+	 * @param   object  &$params  The article params
+	 * @param   integer $page     The 'page' number
+	 *
+	 * @return   void
+	 * @since    3.0.1
+	 */
+	public function onContentAfterDisplay($context, &$article, &$params, $page = 0)
 	{
-		if (strpos($article->text, '{jtcsv2html') === false
-			&& strpos($article->text, '{csv2html') === false
+		if (empty($article->text))
+		{
+			if (empty($article->introtext))
+			{
+				return null;
+			}
+
+			$text = $article->introtext . $article->fulltext;
+		}
+		else
+		{
+			$text = $article->text;
+		}
+
+		if (strpos($text, 'jtcsv2html') === false
 			|| $context == 'com_finder.indexer'
-			|| $this->app->isClient('administrator')
-		)
+			|| $this->app->isClient('administrator'))
 		{
-			return;
+			return null;
 		}
 
-		/* Pluginaufruf auslesen */
-		if ($this->_patterns($article->text) === false)
+		if (count($this->cssFiles) > 0)
 		{
-			return;
+			$this->_loadCSS();
 		}
 
-		$this->delimiter = trim($this->params->get('delimiter', ','));
-		$this->enclosure = trim($this->params->get('enclosure', '"'));
-		$this->filter    = trim($this->params->get('filter', 0));
-
-		$_error       = ($context == 'com_content.search') ? false : true;
-		$cache        = $this->params->get('cache', 1);
-		$this->_error = $_error;
-
-		foreach ($this->_matches as $match)
-		{
-			$file = JPATH_SITE . '/images/jtcsv2html/' . $match['fileName'] . '.csv';
-
-			$articleId = !empty($article->id) ? $article->id : null;
-
-			$this->_csv['cid']      = self::getArticleId($articleId);
-			$this->_csv['file']     = $file;
-			$this->_csv['filename'] = $match['fileName'];
-			$this->_csv['tplname']  = $match['tplName'];
-			$this->_csv['filter']   = $match['filter'];
-			$this->_csv['filetime'] = (file_exists($file)) ? filemtime($file) : -1;
-
-			$this->_setTplPath();
-
-			if ($this->_csv['filetime'] != -1)
-			{
-				if ($cache)
-				{
-					$setOutput = $this->getDbCache();
-				}
-				else
-				{
-					$setOutput = $this->_readCsv();
-					if ($setOutput) $this->_buildHtml();
-				}
-
-				/* Plugin-Aufruf durch HTML-Ausgabe ersetzen */
-				if ($setOutput)
-				{
-					$output = '<div class="jtcsv2html_wrapper">';
-
-					if ($this->_csv['filter'])
-					{
-						$output .= '<input type="text" class="search" placeholder="Type to search">';
-						JHtml::_('jquery.framework');
-						JHtml::_('script', 'plugins/content/jtcsv2html/assets/plg_jtcsv2html_search.js', array('version' => 'auto'));
-					}
-					$output .= $this->_html;
-					$output .= '</div>';
-
-					if (!class_exists('Minify_HTML'))
-					{
-						require_once 'assets/minifyHTML.inc';
-					}
-					$output = Minify_HTML::minify($output);
-
-					$article->text = str_replace($match['replacement'], $output, $article->text);
-				}
-				else
-				{
-					if ($_error)
-					{
-						$this->app->enqueueMessage(
-							JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', $match['fileName'] . '.csv')
-							, 'warning'
-						);
-					}
-				}
-			}
-			else
-			{
-				if ($_error)
-				{
-					$this->app->enqueueMessage(
-						JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', $match['fileName'] . '.csv')
-						, 'warning'
-					);
-				}
-
-				$this->_dbClearCache();
-			}
-			unset($this->_csv, $this->_html);
-		} //endforeach
-
-		if (count($this->cssFiles) > 0) $this->_loadCSS();
+		$this->_onContentEvent($context, $article, array('onDisplay' => true));
 
 		// Set profiler start time and memory usage and mark afterLoad in the profiler.
 		JDEBUG ? Profiler::getInstance('Application')->mark('plgContentJtcsv2html') : null;
+
+		return null;
+	}
+
+	private function _loadCSS()
+	{
+		$cssFiles = $this->cssFiles;
+
+		foreach ($cssFiles as $cssFile)
+		{
+			JHtml::_('stylesheet', $cssFile, array('version' => 'auto'));
+		}
+	}
+
+	private function _onContentEvent($context, $article, $options = array())
+	{
+		if ($this->params->get('cache', 0) == 0)
+		{
+			return true;
+		}
+
+		$isNew     = isset($options['isNew']) ? $options['isNew'] : false;
+		$onSave    = isset($options['onSave']) ? $options['onSave'] : false;
+		$onDisplay = isset($options['onDisplay']) ? $options['onDisplay'] : false;
+		$onDelete  = isset($options['onDelete']) ? $options['onDelete'] : false;
+
+		if (!$onDisplay)
+		{
+			$text = $article->introtext . $article->fulltext;
+
+			$this->getArticleId($article->id);
+
+			$matches = $this->getMatches($text);
+
+			if (empty($matches))
+			{
+				return true;
+			}
+		}
+
+		if ($isNew)
+		{
+			return $this->_setDbCidAssociation();
+		}
+
+		if ($onDelete)
+		{
+			return $this->_deleteDbCidAssociation();
+		}
+
+		if (empty(self::$cids))
+		{
+			return true;
+		}
+
+		return $this->_updateDbCidAssociation($onSave);
+	}
+
+	private function getArticleId($id = null)
+	{
+		if (!empty($id))
+		{
+			$this->articleId = $id;
+		}
+
+		return $this->articleId;
 	}
 
 	/**
@@ -194,209 +203,323 @@ class plgContentJtcsv2html extends CMSPlugin
 	 *
 	 * @param   string $article der Artikeltext
 	 *
+	 * @return   mixed  array/bool
+	 *
+	 * @since   3.0.1
+	 */
+	private function getMatches($article)
+	{
+		$calls = [];
+
+		if (preg_match_all(self::PLUGIN_REGEX, $article, $matches, PREG_SET_ORDER))
+		{
+			if (($match = $this->setMatches($matches)) !== false)
+			{
+				$calls = array_merge_recursive($calls, $match);
+			}
+		}
+
+		if (preg_match_all(self::PLUGIN_REGEX_OLD, $article, $matches, PREG_SET_ORDER))
+		{
+			if (($match = $this->setMatches($matches)) !== false)
+			{
+				$calls = array_merge_recursive($calls, $match);
+			}
+		}
+
+		// Eventuell umdrehen,
+		return !empty($calls) ? $calls : false;
+	}
+
+	/**
+	 * @param   array  $matches
+	 * @param   string $articleId
+	 *
 	 * @return   bool
 	 *
 	 * @since   3.0.1
 	 */
-	protected function _patterns($article)
+	private function setMatches($matches)
 	{
-		$return = false;
+		$search    = array(',', '{csv2html', '{jtcsv2html', '}');
+		$replace   = array('.', '');
+		$return    = array();
+		$articleId = $this->getArticleId();
 
-		$p1 = preg_match_all(self::PLUGIN_REGEX, $article, $matches1, PREG_SET_ORDER);
-		$p2 = preg_match_all(self::PLUGIN_REGEX_OLD, $article, $matches2, PREG_SET_ORDER);
-
-		if ($p1)
+		foreach ($matches as $match)
 		{
-			$return = $this->setMatches($matches1);
-		}
+			$filter          = $this->filter;
+			$tplName         = 'default';
+			$path            = trim(str_ireplace($search, $replace, strip_tags($match[0])));
+			$callParams      = explode('.', strtolower($path));
+			$fileName        = array_shift($callParams);
+			$countCallParams = count($callParams);
+			$csvFile         = JPATH_SITE . '/images/jtcsv2html/' . $fileName . '.csv';
+			$filetime        = (file_exists($csvFile)) ? filemtime($csvFile) : -1;
 
-		if ($p2)
-		{
-			$_return = $this->setMatches($matches2);
-			$return  = $return ? $return : $_return;
+			if ($countCallParams > 0)
+			{
+				if ($countCallParams == 2)
+				{
+					$tplName = array_shift($callParams);
+				}
+
+				if (in_array($callParams[0], array('on', 'off')))
+				{
+					if ($callParams[0] != 'on')
+					{
+						$filter = 'off';
+					}
+					else
+					{
+						$filter = 'on';
+					}
+				}
+				else
+				{
+					$tplName = $callParams[0];
+				}
+			}
+
+			$path = $fileName . '.' . $tplName;
+
+			if (empty(self::$csv[$path]))
+			{
+				self::$csv[$path]['fileName'] = $fileName;
+				self::$csv[$path]['filePath'] = $csvFile;
+				self::$csv[$path]['tplName']  = $tplName;
+				self::$csv[$path]['filetime'] = $filetime;
+			}
+
+			if (empty(self::$cids[$articleId]) || !in_array($fileName, self::$cids[$articleId]))
+			{
+				self::$cids[$articleId][] = $fileName;
+			}
+
+			$return[$path][$filter][] = $match[0];
 		}
 
 		return $return;
 	}
 
-	/**
-	 * @param $matches
-	 *
-	 * @return   bool
-	 *
-	 * @since   3.0.1
-	 */
-	protected function setMatches($matches)
+	private function _setDbCidAssociation()
 	{
-		$index = count($this->_matches);
+		$db    = JFactory::getDBO();
+		$query = $db->getQuery(true);
 
-		foreach ($matches as $match)
+		$query->insert($db->quoteName('#__jtcsv2html_assoc'));
+		$query->columns($db->quoteName('cid') . ',' . $db->quoteName('filename'));
+
+		foreach (self::$cids as $cid => $associations)
 		{
-			$filter  = filter_var($this->filter, FILTER_VALIDATE_BOOLEAN);
-			$tplname = 'default';
-
-			$this->_matches[$index]['replacement'] = $match[0];
-
-			if (strpos($match[3], ','))
+			foreach ($associations as $filename)
 			{
-				$callParams      = explode(',', $match[3], 3);
-				$filename        = trim(strtolower($callParams[0]));
-				$countCallParams = count($callParams);
+				$query->values($db->quote($cid) . ',' . $db->quote($filename));
+			}
+		}
 
-				if ($countCallParams >= 2)
-				{
-					$tplname = trim(strtolower($callParams[1]));
-				}
+		$query = str_replace('INSERT INTO', 'INSERT IGNORE INTO', (string) $query);
+		$db->setQuery($query);
 
-				if ($countCallParams == 3)
+		return ($db->execute()) ? true : false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	private function _deleteDbCidAssociation($from = null)
+	{
+		$db       = JFactory::getDBO();
+		$query    = $db->getQuery(true);
+		$toDelete = [];
+
+		$query->delete($db->quoteName('#__jtcsv2html_assoc'));
+
+		foreach (self::$cids as $cid => $associations)
+		{
+
+			$query->where($db->quoteName('cid') . '=' . $db->quote($cid));
+
+			foreach ($associations as $filename)
+			{
+				if ($from == 'update')
 				{
-					if (trim(strtolower($callParams[2])) == 'on')
-					{
-						$filter = true;
-					}
-					elseif (trim(strtolower($callParams[2])) == 'off')
-					{
-						$filter = false;
-					}
+					$toDelete[] = $db->quoteName('filename') . '!=' . $db->quote($filename);
 				}
+				else
+				{
+					$toDelete[] = $db->quoteName('filename') . '=' . $db->quote($filename);
+				}
+			}
+
+			if ($from == 'update')
+			{
+				$query->extendWhere('AND', $toDelete);
 			}
 			else
 			{
-				$filename = $match[3];
+				$query->extendWhere('AND', $toDelete, 'OR');
 			}
-
-			$this->_matches[$index]['fileName'] = $filename;
-			$this->_matches[$index]['tplName']  = $tplname;
-			$this->_matches[$index]['filter']   = $filter;
-
-			$index++;
 		}
 
-		if (!empty($this->_matches))
-		{
-			return true;
-		}
+		$db->setQuery($query);
 
-		return false;
+		return ($db->execute()) ? true : false;
 	}
 
-	private static function getArticleId($id = null)
+	private function _updateDbCidAssociation($onSave = false)
 	{
-		if (!empty($id))
+		$execute = true;
+
+		if ($onSave)
 		{
-			self::$articleId = $id;
+			$execute = $this->_deleteDbCidAssociation('update');
 		}
 
-		return self::$articleId;
-	}
-
-	protected function _setTplPath()
-	{
-		$plgName  = $this->_name;
-		$plgType  = $this->_type;
-		$template = $this->app->getTemplate();
-
-		$tpl['tpl']           = 'images/jtcsv2html';
-		$tpl['tplPlg']        = 'templates/' . $template . '/html/plg_' . $plgType . '_' . $plgName;
-		$tpl['plg']           = 'plugins/' . $plgType . '/' . $plgName . '/tmpl';
-		$tpl['tplDefault']    = 'images/jtcsv2html/default';
-		$tpl['tplPlgDefault'] = 'templates/' . $template . '/html/plg_' . $plgType . '_' . $plgName . '/default';
-		$tpl['default']       = 'plugins/' . $plgType . '/' . $plgName . '/tmpl/default';
-
-		switch (true)
-		{
-			case file_exists(JPATH_SITE . '/' . $tpl['tplPlg'] . '/' . $this->_csv['tplname'] . '.php'):
-				$tplPath = JPATH_SITE . '/' . $tpl['tplPlg'] . '/' . $this->_csv['tplname'] . '.php';
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . '/' . $this->_csv['tplname'] . '.php'):
-				$tplPath = JPATH_SITE . '/' . $tpl['tpl'] . '/' . $this->_csv['tplname'] . '.php';
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['plg'] . '/' . $this->_csv['tplname'] . '.php'):
-				$tplPath = JPATH_SITE . '/' . $tpl['plg'] . '/' . $this->_csv['tplname'] . '.php';
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tplPlgDefault'] . '.php'):
-				$tplPath = JPATH_SITE . '/' . $tpl['tplPlgDefault'] . '.php';
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tplDefault'] . '.php'):
-				$tplPath = JPATH_SITE . '/' . $tpl['tplDefault'] . '.php';
-				break;
-			default:
-				$tplPath = JPATH_SITE . '/' . $tpl['default'] . '.php';
-				break;
-		}
-
-		$cssFile = 'default';
-		switch (true)
-		{
-			case file_exists(JPATH_SITE . '/' . $tpl['tplPlg'] . '/' . $this->_csv['filename'] . '.css'):
-				$cssPath = $tpl['tplPlg'] . '/' . $this->_csv['filename'] . '.css';
-				$cssFile = $this->_csv['filename'];
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . '/' . $this->_csv['filename'] . '.css'):
-				$cssPath = $tpl['tpl'] . '/' . $this->_csv['filename'] . '.css';
-				$cssFile = $this->_csv['filename'];
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tplPlg'] . '/' . $this->_csv['tplname'] . '.css'):
-				$cssPath = $tpl['tplPlg'] . '/' . $this->_csv['tplname'] . '.css';
-				$cssFile = $this->_csv['tplname'];
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tpl'] . '/' . $this->_csv['tplname'] . '.css'):
-				$cssPath = $tpl['tpl'] . '/' . $this->_csv['tplname'] . '.css';
-				$cssFile = $this->_csv['tplname'];
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['plg'] . '/' . $this->_csv['tplname'] . '.css'):
-				$cssPath = $tpl['plg'] . '/' . $this->_csv['tplname'] . '.css';
-				$cssFile = $this->_csv['tplname'];
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tplPlgDefault'] . '.css'):
-				$cssPath = $tpl['tplPlgDefault'] . '.css';
-				break;
-			case file_exists(JPATH_SITE . '/' . $tpl['tplDefault'] . '.css'):
-				$cssPath = $tpl['tplDefault'] . '.css';
-				break;
-			default:
-				$cssPath = $tpl['default'] . '.css';
-				break;
-		}
-
-		$this->_csv['tplPath'] = $tplPath;
-		JHtml::_('stylesheet', $cssPath, array('version' => 'auto'));
-
-//		$this->cssFiles[$cssFile] = $cssPath;
-	}
-
-	protected function getDbCache()
-	{
-		$db  = Factory::getDBO();
-		$cid = $this->_csv['cid'];
-
-		if (empty($cid))
+		if ($execute === false)
 		{
 			return false;
 		}
 
-		$filename = $this->_csv['filename'];
-		$tplname  = $this->_csv['tplname'];
-		$filetime = $this->_csv['filetime'];
+		$execute = $this->_setDbCidAssociation();
+
+		return $execute;
+	}
+
+	/**
+	 * Plugin that loads formatted csv-files within content
+	 *
+	 * @param   string   $context   The context of the content being passed to the plugin.
+	 * @param   object   &$article  The article object.  Note $article->text is also available
+	 * @param   mixed    &$params   The article params
+	 * @param   integer  $page      The 'page' number
+	 *
+	 * @return  mixed   true if there is an error. Void otherwise.
+	 *
+	 * @since   1.6
+	 */
+	public function onContentPrepare($context, &$article, &$params, $page = 0)
+	{
+		if (strpos($article->text, '{jtcsv2html') === false
+			&& strpos($article->text, '{csv2html') === false
+			|| $context == 'com_finder.indexer'
+			|| ($context == 'com_content.category' && $this->app->input->get('layout', null) != 'blog')
+			|| $this->app->isClient('administrator')
+		)
+		{
+			return true;
+		}
+
+		$articleId = !empty($article->id) ? $article->id : null;
+		$this->getArticleId($articleId);
+
+		$this->delimiter = trim($this->params->get('delimiter', ','));
+		$this->enclosure = trim($this->params->get('enclosure', '"'));
+		$this->filter    = ($this->params->get('filter', 0) == 1) ? 'on' : 'off';
+		$cache           = $this->params->get('cache', 1);
+
+		/* Pluginaufruf auslesen */
+		if (($matches = $this->getMatches($article->text)) === false)
+		{
+			return true;
+		}
+
+		foreach ($matches as $path => $calls)
+		{
+			if (self::$csv[$path]['filetime'] !== -1)
+			{
+				if ($cache)
+				{
+					if (empty(self::$csv[$path]['cache']))
+					{
+						$setOutput = $this->getDbCache($path);
+					}
+					else
+					{
+						$this->_html = self::$csv[$path]['cache'];
+						$setOutput   = true;
+						unset(self::$cids[$path]);
+					}
+				}
+				else
+				{
+					$setOutput = $this->_readCsv($path);
+
+					if ($setOutput)
+					{
+						$setOutput = $this->_buildHtml($path);
+					}
+				}
+
+				/* Plugin-Aufruf durch HTML-Ausgabe ersetzen */
+				if ($setOutput)
+				{
+					foreach ($calls as $filter => $call)
+					{
+						$output = '<div class="jtcsv2html_wrapper">';
+
+						if ($filter == 'on')
+						{
+							$output .= '<input type="text" class="search" placeholder="'
+								. Text::_('PLG_CONTENT_JTCSV2HTML_FILTER_PLACEHOLDER') . '">';
+							JHtml::_('jquery.framework');
+							JHtml::_('script', 'plugins/content/jtcsv2html/assets/plg_jtcsv2html_search.js', array('version' => 'auto'));
+						}
+						$output .= $this->_html;
+						$output .= '</div>';
+
+						if (!class_exists('Minify_HTML'))
+						{
+							require_once 'assets/minifyHTML.inc';
+						}
+						$output = Minify_HTML::minify($output);
+
+						$article->text = str_replace($call, $output, $article->text);
+
+						$this->setCss($path);
+					}
+				}
+				else
+				{
+					$this->app->enqueueMessage(
+						JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', self::$csv[$path]['tplName'] . '.php')
+						, 'warning'
+					);
+
+//					unset(self::$csv[$path]);
+				}
+			}
+			else
+			{
+				$this->app->enqueueMessage(
+					JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', self::$csv[$path]['fileName'] . '.csv')
+					, 'warning'
+				);
+
+				unset(self::$csv[$path]);
+			}
+
+			unset($this->_html);
+		} //endforeach
+	}
+
+	private function getDbCache($path)
+	{
+		$filetime = self::$csv[$path]['filetime'];
+		list($filename, $tplname) = explode('.', $path);
 		$dbAction = null;
+		$db       = Factory::getDBO();
+		$query    = $db->getQuery(true);
 
-		$query = $db->getQuery(true);
-
-		$query->select($db->quoteName(array('filetime', 'id', 'datas')));
+		$query->select($db->quoteName(array('filetime', 'datas')));
 		$query->from($db->quoteName('#__jtcsv2html'));
-		$query->where(
-			array(
-				$db->quoteName('cid') . '=' . $db->quote($cid),
-				$db->quoteName('filename') . '=' . $db->quote($filename),
-				$db->quoteName('tplname') . '=' . $db->quote($tplname),
-			)
-		);
+		$query->where($db->quoteName('filename') . '=' . $db->quote($filename));
+		$query->where($db->quoteName('tpl') . '=' . $db->quote($tplname));
 
 		$db->setQuery($query);
 
 		$result     = $db->loadAssoc();
-		$dbFiletime = $result['filetime'];
-		$id         = $result['id'];
+		$dbFiletime = !empty($result['filetime']) ? $result['filetime'] : null;
 
 		if ($dbFiletime !== null)
 		{
@@ -410,54 +533,48 @@ class plgContentJtcsv2html extends CMSPlugin
 				return true;
 				break;
 			case ($dbAction == 'update'):
-				return $this->_dbUpdateCache($id);
+				return $this->_dbUpdateCache($path);
 				break;
 			default:
-				return $this->_dbSaveCache();
+				return $this->_dbSaveCache($path);
 				break;
 		}
 	}
 
-	protected function _dbUpdateCache($id)
+	private function _dbUpdateCache($path)
 	{
-		$cid = $this->_csv['cid'];
+		$filetime = self::$csv[$path]['filetime'];
+		list($filename, $tplname) = explode('.', $path);
 
-		if (empty($cid))
+		if ($this->_readCsv($path))
 		{
-			return false;
-		}
+			if ($this->_buildHtml($path))
+			{
+				$db    = JFactory::getDBO();
+				$query = $db->getQuery(true);
 
-		$filename = $this->_csv['filename'];
-		$tplname  = $this->_csv['tplname'];
-		$filetime = $this->_csv['filetime'];
-		$db       = JFactory::getDBO();
-		$query    = $db->getQuery(true);
+				$query->update('#__jtcsv2html');
+				$query->set(
+					array(
+						$db->quoteName('filetime') . '=' . $db->quote($filetime),
+						$db->quoteName('datas') . '=' . $db->quote($this->_html),
+					)
+				)
+					->where($db->quoteName('filename') . '=' . $db->quote($filename))
+					->where($db->quoteName('tpl') . '=' . $db->quote($tplname));
 
-		if ($this->_readCsv())
-		{
-			$this->_buildHtml();
+				$db->setQuery($query);
 
-			$query->update('#__jtcsv2html');
-			$query->set('cid=' . $db->quote($cid));
-			$query->set('filename=' . $db->quote($filename));
-			$query->set('tplname=' . $db->quote($tplname));
-			$query->set('filetime=' . $db->quote($filetime));
-			$query->set('datas=' . $db->quote($this->_html));
-			$query->where('id=' . $db->quote($id));
-
-			$db->setQuery($query);
-
-			return ($db->execute()) ? true : false;
+				return ($db->execute()) ? true : false;
+			}
 		}
 
 		return false;
 	}
 
-	protected function _readCsv()
+	private function _readCsv($path)
 	{
-		$return = false;
-		$csv    = &$this->_csv;
-		$file   = $csv['file'];
+		$csvFile = self::$csv[$path]['filePath'];
 
 		if ($this->delimiter == 'null')
 		{
@@ -469,173 +586,125 @@ class plgContentJtcsv2html extends CMSPlugin
 			$this->delimiter = "\t";
 		}
 
-		if (version_compare(phpversion(), '5.3', '<'))
+		if (file_exists($csvFile) || is_readable($csvFile))
 		{
-			if (file_exists($file) || is_readable($file))
+			$csvArray = @file($csvFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+			foreach ($csvArray as &$row)
 			{
-				$data = array();
+				$row = str_getcsv($row, $this->delimiter, "$this->enclosure");
 
-				if (($handle = fopen($file, 'r')) !== false)
-				{
-					$filesize = filesize($file);
+				array_walk($row,
+					function (&$entry) {
+						$enc   = mb_detect_encoding($entry, "UTF-8,ISO-8859-1,WINDOWS-1252");
+						$entry = ($enc == 'UTF-8') ? trim($entry) : trim(iconv($enc, 'UTF-8', $entry));
+					}
+				);
+			} //endforeach
 
-					while (($row = fgetcsv($handle, $filesize, $this->delimiter, $this->enclosure)) !== false)
-					{
-						array_walk($row,
-							function (&$entry) {
-								$enc   = mb_detect_encoding($entry, "UTF-8,ISO-8859-1,WINDOWS-1252");
-								$entry = ($enc == 'UTF-8') ? trim($entry) : trim(iconv($enc, 'UTF-8', $entry));
-							}
-						);
-
-						$setDatas = false;
-
-						foreach ($row as $value)
-						{
-							if ($value != '') $setDatas = true;
-						}
-
-						if ($setDatas) $data[] = $row;
-					} //endwhile
-
-					fclose($handle);
-
-					$csv['datas'] = $data;
-					$return       = true;
-				} //endfopen
-			} //end file_exist
+			self::$csv[$path]['content'] = $csvArray;
+			return true;
 		}
-		else
+
+		return false;
+	}
+
+	private function _buildHtml($path)
+	{
+		$fileName = self::$csv[$path]['fileName'];
+		$tplName  = self::$csv[$path]['tplName'];
+		$options  = array('csv' => self::$csv[$path]);
+		$layout   = new FileLayout($fileName);
+
+		$layout->setIncludePaths($this->layoutPath);
+		$layout->setDebug(JDEBUG);
+
+		if (!empty($this->_html = $layout->render($options)))
 		{
-			if (file_exists($file) || is_readable($file))
+			return true;
+		}
+		elseif ($this->_html = $layout->setLayoutId($tplName)->render($options))
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	private function _dbSaveCache($path)
+	{
+		$filetime = self::$csv[$path]['filetime'];
+		list($filename, $tplname) = explode('.', $path);
+
+		if ($this->_readCsv($path))
+		{
+			if ($this->_buildHtml($path))
 			{
-				$csvArray = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+				$db    = JFactory::getDBO();
+				$query = $db->getQuery(true);
 
-				foreach ($csvArray as &$row)
-				{
-					$row = str_getcsv($row, $this->delimiter, "$this->enclosure");
-
-					array_walk($row,
-						function (&$entry) {
-							$enc   = mb_detect_encoding($entry, "UTF-8,ISO-8859-1,WINDOWS-1252");
-							$entry = ($enc == 'UTF-8') ? trim($entry) : trim(iconv($enc, 'UTF-8', $entry));
-						}
+				$query->insert($db->quoteName('#__jtcsv2html'))
+					->set(
+						array(
+							$db->quoteName('filename') . '=' . $db->quote($filename),
+							$db->quoteName('tpl') . '=' . $db->quote($tplname),
+							$db->quoteName('filetime') . '=' . $db->quote($filetime),
+							$db->quoteName('datas') . '=' . $db->quote($this->_html),
+						)
 					);
-				} //endforeach
+				$db->setQuery($query);
 
-				$csv['datas'] = $csvArray;
-				$return       = true;
-			} //end file_exist
-		} //endif phpversion
+				return ($db->execute()) ? true : false;
+			}
+		}
 
-		return $return;
+		return false;
 	}
 
-	protected function _buildHtml()
+	/**
+	 * @param $tpl
+	 */
+	private function setCss($path)
 	{
-		ob_start();
-		require $this->_csv['tplPath'];
+		$fileName = self::$csv[$path]['fileName'] . '.css';
+		$tplName  = self::$csv[$path]['tplName'] . '.css';
+		$realpath = realpath(JPATH_SITE);
+		$cssPaths = str_replace($realpath . '/', '', $this->layoutPath);
 
-		$this->_html = ob_get_clean();
-	}
-
-	protected function _dbSaveCache()
-	{
-		$return = false;
-		$cid    = $this->_csv['cid'];
-
-		if (empty($cid))
+		foreach ($this->layoutPath as $key => $layout)
 		{
-			return false;
+
+			if (file_exists($layout . '/' . $fileName))
+			{
+				if (!in_array($cssPaths[$key] . '/' . $fileName, $this->cssFiles))
+				{
+					$this->cssFiles[] = $cssPaths[$key] . '/' . $fileName;
+				}
+
+				return true;
+			}
+
+			if (file_exists($layout . '/' . $tplName))
+			{
+				if (!in_array($cssPaths[$key] . '/' . $tplName, $this->cssFiles))
+				{
+					$this->cssFiles[] = $cssPaths[$key] . '/' . $tplName;
+				}
+
+				return true;
+			}
 		}
 
-		$filename = $this->_csv['filename'];
-		$tplname  = $this->_csv['tplname'];
-		$filetime = $this->_csv['filetime'];
-		$db       = JFactory::getDBO();
-		$query    = $db->getQuery(true);
-
-		if ($this->_readCsv())
-		{
-			$this->_buildHtml();
-			$query->clear();
-			$columns = 'cid, filename, tplname, filetime, datas';
-			$values  = $db->quote($cid)
-				. ',' . $db->quote($filename)
-				. ',' . $db->quote($tplname)
-				. ',' . $db->quote($filetime)
-				. ',' . $db->quote($this->_html);
-
-			$query->insert($db->quoteName('#__jtcsv2html'));
-			$query->columns($columns);
-			$query->values($values);
-			$db->setQuery($query);
-
-			$return = $db->execute();
-		}
-
-		return $return;
-	}
-
-	protected function _dbClearCache($onSave = false)
-	{
-		$db       = JFactory::getDBO();
-		$cid      = $this->_csv['cid'];
-		$filename = $this->_csv['filename'];
-//		$tplname  = $this->_csv['tplname'];
-		$query = $db->getQuery(true);
-
-		$query->clear();
-		$query->delete('#__jtcsv2html');
-
-		if (!$onSave)
-		{
-			$query->where('filename=' . $db->quote($filename));
-//			$query->where('tplname=' . $db->quote($tplname));
-		}
-		else
-		{
-			$query->where('cid=' . $db->quote($cid));
-		}
-
-		$db->setQuery($query);
-		$return = $db->execute();
-
-		$query->clear();
-		$db->setQuery('OPTIMIZE TABLE #__jtcsv2html_data');
-		$db->execute();
-
-		return $return;
-	}
-
-	protected function _loadCSS()
-	{
-		$cssFiles = $this->cssFiles;
-
-		foreach ($cssFiles as $cssFile)
-		{
-			JHtml::_('stylesheet', $cssFile, array('version' => 'auto'));
-		}
+		return false;
 	}
 
 	public function onContentAfterSave($context, $article, $isNew)
 	{
-		$this->_onContentEvent($context, $article, $isNew);
-	}
-
-	protected function _onContentEvent($context, $article, $isNew = false)
-	{
-		if (version_compare(phpversion(), '5.3', '<') || $isNew)
-		{
-			return;
-		}
-
-		$this->_csv['cid'] = $article->id;
-		$this->_dbClearCache(true);
+		$this->_onContentEvent($context, $article, array('onSave' => true, 'isNew' => $isNew));
 	}
 
 	public function onContentBeforeDelete($context, $data)
 	{
-		$this->_onContentEvent($context, $data);
+		$this->_onContentEvent($context, $data, array('onDelete' => true));
 	}
 }

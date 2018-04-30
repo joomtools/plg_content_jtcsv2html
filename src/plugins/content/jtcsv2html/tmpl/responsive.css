@@ -1,21 +1,13 @@
-@charset "UTF-8";
 /**
- * @Copyright   JoomTools
- * @package     JT - Csv2Html - Plugin for Joomla! 2.5.x - 3.x
- * @author       Guido De Gobbis
- * @link        http://www.joomtools.de
+ * @package      Joomla.Plugin
+ * @subpackage   Content.Jtcsv2html
  *
- * @license     GNU/GPL <http://www.gnu.org/licenses/>
- *              This program is free software: you can redistribute it and/or modify
- *              it under the terms of the GNU General Public License as published by
- *              the Free Software Foundation, either version 3 of the License, or
- *              (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * @author       Guido De Gobbis <support@joomtools.de>
+ * @copyright    (c) 2018 JoomTools.de - All rights reserved.
+ * @license      GNU General Public License version 3 or later
  */
+
+@charset "UTF-8";
 
 .jtcsv2html_wrapper {
 	margin: 2em 0;

@@ -11,20 +11,11 @@
 	<description>PLG_CONTENT_JTCSV2HTML_XML_DESCRIPTION</description>
 
 	<files>
-		<folder>assets</folder>
-		<folder>testfile</folder>
-		<folder>tmpl</folder>
-		<folder>sql</folder>
-		<file plugin="jtcsv2html">jtcsv2html.php</file>
-		<file>jtcsv2html.scriptfile.php</file>
-		<file>jtcsv2html.xml</file>
+		##FILES##
 	</files>
 
 	<languages folder="language">
-		<language tag="de-DE">de-DE/de-DE.plg_content_jtcsv2html.ini</language>
-		<language tag="de-DE">de-DE/de-DE.plg_content_jtcsv2html.sys.ini</language>
-		<language tag="en-GB">en-GB/en-GB.plg_content_jtcsv2html.ini</language>
-		<language tag="en-GB">en-GB/en-GB.plg_content_jtcsv2html.sys.ini</language>
+		##LANGUAGE_FILES##
 	</languages>
 
 	<install>
@@ -35,7 +26,7 @@
 
 	<uninstall>
 		<sql>
-			<file driver="mysql" charset="utf8">sql/uninstall.mysql.utf8.sql</file>
+			<file driver="mysql" charset="utf8">sql/uninstall.mysql.sql</file>
 		</sql>
 	</uninstall>
 

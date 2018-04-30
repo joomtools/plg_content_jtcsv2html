@@ -1,20 +1,11 @@
 <?php
 /**
- * @Copyright  JoomTools
- * @package    JT - Csv2Html - Plugin for Joomla! 3.x
- * @author     Guido De Gobbis
- * @link       http://www.joomtools.de
+ * @package      Joomla.Plugin
+ * @subpackage   Content.Jtcsv2html
  *
- * @license    GNU/GPL v3 <http://www.gnu.org/licenses/>
- *             This program is free software: you can redistribute it and/or modify
- *             it under the terms of the GNU General Public License as published by
- *             the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * @author       Guido De Gobbis <support@joomtools.de>
+ * @copyright    (c) 2018 JoomTools.de - All rights reserved.
+ * @license      GNU General Public License version 3 or later
  */
 
 defined('_JEXEC') or die('Restricted access');
@@ -24,11 +15,16 @@ jimport('joomla.filesystem.file');
 class plgContentJtCsv2htmlInstallerScript
 {
 	/**
-	 * Constructor
+	 * Extension script constructor.
 	 *
-	 * @param   JAdapterInstance  $adapter  The object responsible for running this script
+	 * @since   3.0.1
 	 */
-	public function __construct(JAdapterInstance $adapter){}
+	public function __construct()
+	{
+		// Define the minumum versions to be supported.
+		$this->minimumJoomla = '3.8';
+		$this->minimumPhp    = '7.0';
+	}
 
 	/**
 	 * Called on installation
@@ -42,13 +38,4 @@ class plgContentJtCsv2htmlInstallerScript
 		// create a folder inside your images folder
 		JFolder::create(JPATH_ROOT.'/images/jtcsv2html');
 	}
-
-	/**
-	 * Called on uninstallation
-	 *
-	 * @param   JAdapterInstance  $adapter  The object responsible for running this script
-	 *
-	 * @return  boolean  True on success
-	 */
-	public function uninstall(JAdapterInstance $adapter){}
 }

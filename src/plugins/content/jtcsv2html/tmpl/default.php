@@ -1,44 +1,35 @@
 <?php
 /**
- * @Copyright    JoomTools
- * @package      JT - Csv2Html - Plugin for Joomla! 2.5.x - 3.x
- * @author       Guido De Gobbis
- * @link         http://www.joomtools.de
+ * @package      Joomla.Plugin
+ * @subpackage   Content.Jtcsv2html
  *
- * @license      GNU/GPL <http://www.gnu.org/licenses/>
- *              This program is free software: you can redistribute it and/or modify
- *              it under the terms of the GNU General Public License as published by
- *              the Free Software Foundation, either version 3 of the License, or
- *              (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * @author       Guido De Gobbis <support@joomtools.de>
+ * @copyright    (c) 2018 JoomTools.de - All rights reserved.
+ * @license      GNU General Public License version 3 or later
  */
-
 
 // no direct access
 defined('_JEXEC') or die;
+extract($displayData);
 ?>
-<table class="<?php echo $this->_csv['filename']; ?> <?php echo $this->_csv['tplname']; ?>">
+<table class="<?php echo $csv['fileName']; ?> <?php echo $csv['tplName']; ?>">
 	<thead>
 	<tr>
 		<?php // erstellen der Kopfzeile
-		foreach ($this->_csv['datas'][0] as $hKey => $headline) : ?>
+		foreach ($csv['content'][0] as $hKey => $headline) : ?>
 			<th class="csvcol<?php echo($hKey + 1); ?>"><?php echo $headline; ?></th>
 		<?php endforeach; ?>
 	</tr>
 	</thead>
 	<tbody>
 	<?php // erstellen des Tabelleninhalts
-	if (array_key_exists('1', $this->_csv['datas']) === false)
+	if (array_key_exists('1', $csv['content']) === false)
 	{
-		$this->_csv['datas'][0] = array(false);
+		$csv['content'][0] = array(false);
 	}
 
 	// erstellen der Datenzeilen
-	foreach ($this->_csv['datas'] as $dKey => $datas) :
+	foreach ($csv['content'] as $dKey => $datas) :
 		if ($dKey == 0)
 		{
 			$datasCount = count($datas);
