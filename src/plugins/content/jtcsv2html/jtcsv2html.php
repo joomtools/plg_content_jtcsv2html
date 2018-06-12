@@ -596,7 +596,7 @@ class plgContentJtcsv2html extends CMSPlugin
 
 				array_walk($row,
 					function (&$entry) {
-						$enc   = mb_detect_encoding($entry, "UTF-8,ISO-8859-1,WINDOWS-1252");
+						$enc   = mb_detect_encoding($entry, "UTF-8,ISO-8859-1,WINDOWS-1252,CP1252");
 						$entry = ($enc == 'UTF-8') ? trim($entry) : trim(iconv($enc, 'UTF-8', $entry));
 					}
 				);

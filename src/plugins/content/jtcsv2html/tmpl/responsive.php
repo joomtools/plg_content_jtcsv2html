@@ -38,7 +38,7 @@ extract($displayData);
 			continue;
 		}
 		?>
-		<tr>
+		<tr class="jtcsv2html-item">
 			<?php
 			for ($i = 0; $i < $datasCount; $i++) :
 				if ($datas[$i] === false) : ?>

@@ -5,12 +5,12 @@
             $('.jtcsv2html_wrapper').each(function () {
 
                 var $search = $(this).find('.search');
-                var $rows = $(this).find('tbody > tr');
+                var $item = $(this).find('.jtcsv2html-item');
 
                 $search.keyup(function () {
                     var val = $.trim($(this).val()).replace(/ +/g, ' ').toLowerCase();
 
-                    $rows.show().filter(function () {
+                    $item.show().filter(function () {
                         var text = $(this).text().replace(/\s+/g, ' ').toLowerCase();
                         return !~text.indexOf(val);
                     }).hide();
