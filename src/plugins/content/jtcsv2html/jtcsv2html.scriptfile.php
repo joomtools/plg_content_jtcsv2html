@@ -4,7 +4,7 @@
  * @subpackage   Content.Jtcsv2html
  *
  * @author       Guido De Gobbis <support@joomtools.de>
- * @copyright    (c) 2018 JoomTools.de - All rights reserved.
+ * @copyright    2021 JoomTools.de - All rights reserved.
  * @license      GNU General Public License version 3 or later
  */
 
@@ -22,8 +22,8 @@ class plgContentJtCsv2htmlInstallerScript
 	public function __construct()
 	{
 		// Define the minumum versions to be supported.
-		$this->minimumJoomla = '3.8';
-		$this->minimumPhp    = '7.0';
+		$this->minimumJoomla = '3.9';
+		$this->minimumPhp    = '7.3';
 	}
 
 	/**

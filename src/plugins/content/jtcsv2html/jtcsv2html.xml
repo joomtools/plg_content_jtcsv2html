@@ -14,10 +14,6 @@
 		##FILES##
 	</files>
 
-	<languages folder="language">
-		##LANGUAGE_FILES##
-	</languages>
-
 	<install>
 		<sql>
 			<file driver="mysql" charset="utf8">sql/install.mysql.utf8mb4.sql</file>
@@ -53,6 +49,14 @@
 				       default='"'
 				       label="PLG_CONTENT_JTCSV2HTML_ENCLOSURE"
 				       description="PLG_CONTENT_JTCSV2HTML_ENCLOSURE_DESC"/>
+				<field name="basefolder"
+				       type="folderlist"
+				       default=''
+				       exclude="jtcsv2html"
+				       directory="images"
+				       hide_none="true"
+				       label="PLG_CONTENT_JTCSV2HTML_FOLDER"
+				       description="PLG_CONTENT_JTCSV2HTML_FOLDER_DESC"/>
 				<field name="filter"
 				       type="radio"
 				       class="btn-group"

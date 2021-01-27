@@ -1,5 +1,5 @@
 {
-  "name"       : "JoomTools/plg_content_jtcsv2html",
+  "name"       : "joomtools/plg_content_jtcsv2html",
   "description": "Plugin to render html tables from CSV files.",
   "license"    : "GPL-3+",
   "require"    : {

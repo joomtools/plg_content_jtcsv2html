@@ -4,7 +4,7 @@
  * @subpackage   Content.Jtcsv2html
  *
  * @author       Guido De Gobbis <support@joomtools.de>
- * @copyright    (c) 2018 JoomTools.de - All rights reserved.
+ * @copyright    2021 JoomTools.de - All rights reserved.
  * @license      GNU General Public License version 3 or later
  */
 
@@ -12,6 +12,7 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Layout\FileLayout;
 use Joomla\CMS\Plugin\CMSPlugin;
@@ -40,9 +41,10 @@ class plgContentJtcsv2html extends CMSPlugin
 	{
 		parent::__construct($subject, $params);
 
+		$basefolder       = $this->params->get('basefolder', 'jtcsv2html');
 		$template         = $this->app->getTemplate();
 		$this->layoutPath = array(
-			JPATH_SITE . '/images/jtcsv2html',
+			JPATH_SITE . '/images/' . $basefolder,
 			JPATH_SITE . '/templates/' . $template . '/html/plg_' . $this->_type . '_' . $this->_name,
 			JPATH_SITE . '/plugins/' . $this->_type . '/' . $this->_name . '/tmpl',
 		);
@@ -115,7 +117,6 @@ class plgContentJtcsv2html extends CMSPlugin
 		}
 
 		if (strpos($text, 'jtcsv2html') === false
-			|| $context == 'com_finder.indexer'
 			|| $this->app->isClient('administrator'))
 		{
 			return null;
@@ -252,9 +253,9 @@ class plgContentJtcsv2html extends CMSPlugin
 			$tplName         = 'default';
 			$path            = trim(str_ireplace($search, $replace, strip_tags($match[0])));
 			$callParams      = explode('.', strtolower($path));
-			$fileName        = array_shift($callParams);
+			$fileName        = trim(array_shift($callParams), '/\\');
 			$countCallParams = count($callParams);
-			$csvFile         = JPATH_SITE . '/images/jtcsv2html/' . $fileName . '.csv';
+			$csvFile         = $this->layoutPath[0] .'/' . $fileName . '.csv';
 			$filetime        = (file_exists($csvFile)) ? filemtime($csvFile) : -1;
 
 			if ($countCallParams > 0)
@@ -402,7 +403,6 @@ class plgContentJtcsv2html extends CMSPlugin
 	{
 		if (strpos($article->text, '{jtcsv2html') === false
 			&& strpos($article->text, '{csv2html') === false
-			|| $context == 'com_finder.indexer'
 			|| ($context == 'com_content.category' && $this->app->input->get('layout', null) != 'blog')
 			|| $this->app->isClient('administrator')
 		)
@@ -462,9 +462,10 @@ class plgContentJtcsv2html extends CMSPlugin
 						{
 							$output .= '<input type="text" class="search" placeholder="'
 								. Text::_('PLG_CONTENT_JTCSV2HTML_FILTER_PLACEHOLDER') . '">';
-							JHtml::_('jquery.framework');
-							JHtml::_('script', 'plugins/content/jtcsv2html/assets/plg_jtcsv2html_search.js', array('version' => 'auto'));
+
+							HTMLHelper::_('script', 'plugins/content/jtcsv2html/assets/plg_jtcsv2html_search.min.js', array('version' => 'auto'));
 						}
+
 						$output .= $this->_html;
 						$output .= '</div>';
 
@@ -472,6 +473,7 @@ class plgContentJtcsv2html extends CMSPlugin
 						{
 							require_once 'assets/minifyHTML.inc';
 						}
+
 						$output = Minify_HTML::minify($output);
 
 						$article->text = str_replace($call, $output, $article->text);
@@ -482,8 +484,8 @@ class plgContentJtcsv2html extends CMSPlugin
 				else
 				{
 					$this->app->enqueueMessage(
-						JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', self::$csv[$path]['tplName'] . '.php')
-						, 'warning'
+						JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', self::$csv[$path]['tplName'] . '.php'),
+						'warning'
 					);
 
 //					unset(self::$csv[$path]);
@@ -492,15 +494,15 @@ class plgContentJtcsv2html extends CMSPlugin
 			else
 			{
 				$this->app->enqueueMessage(
-					JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', self::$csv[$path]['fileName'] . '.csv')
-					, 'warning'
+					JText::sprintf('PLG_CONTENT_JTCSV2HTML_NOCSV', self::$csv[$path]['fileName'] . '.csv'),
+					'warning'
 				);
 
 				unset(self::$csv[$path]);
 			}
 
 			unset($this->_html);
-		} //endforeach
+		}
 	}
 
 	private function getDbCache($path)
@@ -550,7 +552,7 @@ class plgContentJtcsv2html extends CMSPlugin
 		{
 			if ($this->_buildHtml($path))
 			{
-				$db    = JFactory::getDBO();
+				$db    = Factory::getDBO();
 				$query = $db->getQuery(true);
 
 				$query->update('#__jtcsv2html');

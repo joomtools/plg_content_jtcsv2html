@@ -1,4 +1,10 @@
 --
+-- Lösche Tabelle `#__jtcsv2html`
+--
+
+DROP TABLE IF EXISTS `#__jtcsv2html`;
+
+--
 -- Tabellenstruktur für Tabelle `#__jtcsv2html`
 --
 
@@ -9,6 +15,12 @@ CREATE TABLE IF NOT EXISTS `#__jtcsv2html` (
   `datas` longtext NOT NULL COMMENT 'Ausgabe der CSV-Datei als Tabelle (Template-HTML)',
   PRIMARY KEY (`filename`, `tpl`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 DEFAULT COLLATE=utf8mb4_unicode_ci COMMENT='Tabelle das Plugins jtcsv2html';
+
+--
+-- Lösche Tabelle `#__jtcsv2html_assoc`
+--
+
+DROP TABLE IF EXISTS `#__jtcsv2html_assoc`;
 
 --
 -- Tabellenstruktur für Tabelle `#__jtcsv2html_assoc`
