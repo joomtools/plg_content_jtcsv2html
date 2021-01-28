@@ -54,7 +54,7 @@
 				       default=''
 				       exclude="jtcsv2html"
 				       directory="images"
-				       hide_none="true"
+				       hide_none="false"
 				       label="PLG_CONTENT_JTCSV2HTML_FOLDER"
 				       description="PLG_CONTENT_JTCSV2HTML_FOLDER_DESC"/>
 				<field name="filter"

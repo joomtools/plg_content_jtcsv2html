@@ -42,9 +42,10 @@ class plgContentJtcsv2html extends CMSPlugin
 		parent::__construct($subject, $params);
 
 		$basefolder       = $this->params->get('basefolder', 'jtcsv2html');
+		$basefolder       = $basefolder == '-1' ? '' : '/' . $basefolder;
 		$template         = $this->app->getTemplate();
 		$this->layoutPath = array(
-			JPATH_SITE . '/images/' . $basefolder,
+			JPATH_SITE . '/images' . $basefolder,
 			JPATH_SITE . '/templates/' . $template . '/html/plg_' . $this->_type . '_' . $this->_name,
 			JPATH_SITE . '/plugins/' . $this->_type . '/' . $this->_name . '/tmpl',
 		);
@@ -141,7 +142,7 @@ class plgContentJtcsv2html extends CMSPlugin
 
 		foreach ($cssFiles as $cssFile)
 		{
-			JHtml::_('stylesheet', $cssFile, array('version' => 'auto'));
+			HTMLHelper::_('stylesheet', $cssFile, array('version' => 'auto'));
 		}
 	}
 
@@ -242,7 +243,7 @@ class plgContentJtcsv2html extends CMSPlugin
 	 */
 	private function setMatches($matches)
 	{
-		$search    = array(',', '{csv2html', '{jtcsv2html', '}');
+		$search    = array(',', ' ');
 		$replace   = array('.', '');
 		$return    = array();
 		$articleId = $this->getArticleId();
@@ -251,7 +252,7 @@ class plgContentJtcsv2html extends CMSPlugin
 		{
 			$filter          = $this->filter;
 			$tplName         = 'default';
-			$path            = trim(str_ireplace($search, $replace, strip_tags($match[0])));
+			$path            = trim(str_ireplace($search, $replace, strip_tags($match[3])));
 			$callParams      = explode('.', strtolower($path));
 			$fileName        = trim(array_shift($callParams), '/\\');
 			$countCallParams = count($callParams);
@@ -305,7 +306,7 @@ class plgContentJtcsv2html extends CMSPlugin
 
 	private function _setDbCidAssociation()
 	{
-		$db    = JFactory::getDBO();
+		$db    = Factory::getDBO();
 		$query = $db->getQuery(true);
 
 		$query->insert($db->quoteName('#__jtcsv2html_assoc'));
@@ -330,7 +331,7 @@ class plgContentJtcsv2html extends CMSPlugin
 	 */
 	private function _deleteDbCidAssociation($from = null)
 	{
-		$db       = JFactory::getDBO();
+		$db       = Factory::getDBO();
 		$query    = $db->getQuery(true);
 		$toDelete = [];
 
@@ -642,7 +643,7 @@ class plgContentJtcsv2html extends CMSPlugin
 		{
 			if ($this->_buildHtml($path))
 			{
-				$db    = JFactory::getDBO();
+				$db    = Factory::getDBO();
 				$query = $db->getQuery(true);
 
 				$query->insert($db->quoteName('#__jtcsv2html'))
