@@ -254,10 +254,20 @@ class plgContentJtcsv2html extends CMSPlugin
 			$tplName         = 'default';
 			$path            = trim(str_ireplace($search, $replace, strip_tags($match[3])));
 			$callParams      = explode('.', strtolower($path));
-			$fileName        = trim(array_shift($callParams), '/\\');
+			$file            = trim(array_shift($callParams), '/\\');
+			$file            = explode('/', $file);
+			$fileName        = array_pop($file);
+			$relFilePath     = implode('/', $file);
+			$csvFile         = $this->layoutPath[0];
 			$countCallParams = count($callParams);
-			$csvFile         = $this->layoutPath[0] .'/' . $fileName . '.csv';
-			$filetime        = (file_exists($csvFile)) ? filemtime($csvFile) : -1;
+
+			if (!empty($relFilePath))
+			{
+				$csvFile .= '/' . $relFilePath;
+			}
+
+			$csvFile  .= '/' . $fileName . '.csv';
+			$fileTime = (file_exists($csvFile)) ? filemtime($csvFile) : -1;
 
 			if ($countCallParams > 0)
 			{
@@ -287,10 +297,11 @@ class plgContentJtcsv2html extends CMSPlugin
 
 			if (empty(self::$csv[$path]))
 			{
-				self::$csv[$path]['fileName'] = $fileName;
-				self::$csv[$path]['filePath'] = $csvFile;
-				self::$csv[$path]['tplName']  = $tplName;
-				self::$csv[$path]['filetime'] = $filetime;
+				self::$csv[$path]['fileName']    = $fileName;
+				self::$csv[$path]['relFilePath'] = $relFilePath;
+				self::$csv[$path]['filePath']    = $csvFile;
+				self::$csv[$path]['tplName']     = $tplName;
+				self::$csv[$path]['fileTime']    = $fileTime;
 			}
 
 			if (empty(self::$cids[$articleId]) || !in_array($fileName, self::$cids[$articleId]))
@@ -427,7 +438,7 @@ class plgContentJtcsv2html extends CMSPlugin
 
 		foreach ($matches as $path => $calls)
 		{
-			if (self::$csv[$path]['filetime'] !== -1)
+			if (self::$csv[$path]['fileTime'] !== -1)
 			{
 				if ($cache)
 				{
@@ -508,7 +519,7 @@ class plgContentJtcsv2html extends CMSPlugin
 
 	private function getDbCache($path)
 	{
-		$filetime = self::$csv[$path]['filetime'];
+		$filetime = self::$csv[$path]['fileTime'];
 		list($filename, $tplname) = explode('.', $path);
 		$dbAction = null;
 		$db       = Factory::getDBO();
@@ -546,7 +557,7 @@ class plgContentJtcsv2html extends CMSPlugin
 
 	private function _dbUpdateCache($path)
 	{
-		$filetime = self::$csv[$path]['filetime'];
+		$filetime = self::$csv[$path]['fileTime'];
 		list($filename, $tplname) = explode('.', $path);
 
 		if ($this->_readCsv($path))
@@ -636,7 +647,7 @@ class plgContentJtcsv2html extends CMSPlugin
 
 	private function _dbSaveCache($path)
 	{
-		$filetime = self::$csv[$path]['filetime'];
+		$filetime = self::$csv[$path]['fileTime'];
 		list($filename, $tplname) = explode('.', $path);
 
 		if ($this->_readCsv($path))
@@ -665,17 +676,27 @@ class plgContentJtcsv2html extends CMSPlugin
 	}
 
 	/**
-	 * @param $tpl
+	 * @param $path
 	 */
 	private function setCss($path)
 	{
-		$fileName = self::$csv[$path]['fileName'] . '.css';
-		$tplName  = self::$csv[$path]['tplName'] . '.css';
-		$realpath = realpath(JPATH_SITE);
-		$cssPaths = str_replace($realpath . '/', '', $this->layoutPath);
+		$fileName    = self::$csv[$path]['fileName'] . '.css';
+		$tplName     = self::$csv[$path]['tplName'] . '.css';
+		$relFilePath = self::$csv[$path]['relFilePath'];
+		$realpath    = realpath(JPATH_SITE);
+		$cssPaths    = str_replace($realpath . '/', '', $this->layoutPath);
+
+		if (!empty($relFilePath))
+		{
+			$cssPaths[0] .= '/' . $relFilePath;
+		}
 
 		foreach ($this->layoutPath as $key => $layout)
 		{
+			if (!empty($relFilePath) && $key == 0)
+			{
+				$layout .= '/' . $relFilePath;
+			}
 
 			if (file_exists($layout . '/' . $fileName))
 			{
