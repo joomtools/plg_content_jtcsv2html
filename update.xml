@@ -2,16 +2,35 @@
 <updates>
 	<update>
 		<name>JT - Csv2Html</name>
-		<description></description>
+		<description>The last supported version for Joomla 3 (compatible with Joomla 4 and Joomla 5)</description>
 		<element>jtcsv2html</element>
 		<type>plugin</type>
 		<folder>content</folder>
 		<client>site</client>
-		<version>3.0.0</version>
+		<version>3.99.0</version>
+		<infourl>https://github.com/joomtools/plg_content_jtcsv2html/releases/tag/3.99.0</infourl>
 		<downloads>
-			<downloadurl type="full" format="zip">https://github.com/joomtools/plg_content_jtcsv2html/releases/download/3.0.0/plg_content_jtcsv2html-3.0.0.zip</downloadurl>
+			<downloadurl type="full" format="zip">https://github.com/joomtools/plg_content_jtcsv2html/releases/tag/3.99.0</downloadurl>
 		</downloads>
 		<maintainer>Guido De Gobbis</maintainer>
-		<targetplatform name="joomla" version="3.[89]"/>
+		<targetplatform name="joomla" version="3.10"/>
+	</update>
+	<update>
+		<name>JT - Csv2Html</name>
+		<description>The last supported version for Joomla 4 (compatible with Joomla 5)</description>
+		<element>jtcsv2html</element>
+		<type>plugin</type>
+		<folder>content</folder>
+		<client>site</client>
+		<version>3.99.0</version>
+		<infourl>https://github.com/joomtools/plg_content_jtcsv2html/releases/tag/3.99.0</infourl>
+		<downloads>
+			<downloadurl type="full" format="zip">https://github.com/joomtools/plg_content_jtcsv2html/releases/download/3.99.0/plg_content_jtcsv2html-3.99.0.zip</downloadurl>
+		</downloads>
+		<sha256>4d00bb6baf560c1e4f8b7a14fdf2c3f51e6048b6a6867213160a581c62a0c15c</sha256>
+		<sha512>8054105fd66e58b0fc8bd96e6c511664fa54acc2b003052e3e3cc2b88db5a06752e70d38fc2b46e70b80382266f6d79de5f59d0bd0012af5c48cce3faec5ae18</sha512>
+		<maintainer>Guido De Gobbis</maintainer>
+		<targetplatform name="joomla" version="[45]"/>
+		<php_minimum>7.4</php_minimum>
 	</update>
 </updates>
