@@ -14,7 +14,7 @@
 		##FILES##
 	</files>
 
-	<media>
+	<media destination="plg_content_jtcsv2html" folder="media">
 		##MEDIA_FILES##
 	</media>
 
@@ -96,7 +96,7 @@
 	</config>
 
 	<updateservers>
-		<server type="extension" priority="1" name="PLG_CONTENT_JTCSV2HTML">https://raw.githubusercontent.com/joomtools/plg_content_jtcsv2html/master/update.xml</server>
+		<server type="extension" priority="1" name="PLG_CONTENT_JTCSV2HTML">https://raw.githubusercontent.com/joomtools/plg_content_jtcsv2html/3.x/update.xml</server>
 	</updateservers>
 
 </extension>

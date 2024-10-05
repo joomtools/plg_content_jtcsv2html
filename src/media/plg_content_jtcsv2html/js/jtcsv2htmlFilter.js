@@ -20,7 +20,7 @@ jtCsv2HtmlDomIsReady(function () {
 
 	Array.prototype.forEach.call($jtcsv2html_wrapper, function (el) {
 
-		let $search = el.querySelector('#jtcsv2htmlFilter'),
+		let $search = el.querySelector('.jtcsv2htmlFilterField'),
 			$rows = el.querySelectorAll('tbody > tr');
 
 		$search.addEventListener('keyup', function () {

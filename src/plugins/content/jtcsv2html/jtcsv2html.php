@@ -423,18 +423,22 @@ class plgContentJtcsv2html extends CMSPlugin
                         $output = '<div class="jtcsv2html_wrapper">';
 
                         if ($filter == 'on') {
+                            $filterId = 'jtcsv2htmlFilter' . uniqid();
                             $output .= '<div class="jtcsv2html_filter_wrapper">';
-                            $output .= '<label for="jtcsv2htmlFilter">';
+                            $output .= '<label for="' . $filterId . '">';
                             $output .= Text::_('PLG_CONTENT_JTCSV2HTML_FILTER_LABEL');
                             $output .= '</label>';
-                            $output .= '<input id="jtcsv2htmlFilter" type="text" placeholder="'
+                            $output .= '<input id="' . $filterId . '" class="jtcsv2htmlFilterField" type="text" placeholder="'
                                 . Text::_('PLG_CONTENT_JTCSV2HTML_FILTER_PLACEHOLDER') . '">';
                             $output .= '</div>';
 
                             HTMLHelper::_(
                                 'script',
-                                'plg_content_jtcsv2html/jtcsv2htmlFilter.js',
-                                array('version' => 'auto')
+                                'plg_content_jtcsv2html/jtcsv2htmlFilter.min.js',
+                                [
+                                    'version' => 'auto',
+                                    'relative' => true,
+                                ]
                             );
                         }
 
@@ -442,7 +446,7 @@ class plgContentJtcsv2html extends CMSPlugin
                         $output .= '</div>';
 
                         if (!class_exists('Minify_HTML')) {
-                            require_once 'assets/minifyHTML.inc';
+                            require_once 'assets/minifyHTML.php';
                         }
 
                         $output        = Minify_HTML::minify($output);
