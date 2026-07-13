@@ -1,56 +1,51 @@
 <?php
 
 /**
- * @package    Jorobo
+ * This is project's console commands configuration for Robo task runner.
  *
- * @copyright  Copyright (C) 2005 - 2015 Open Source Matters, Inc. All rights reserved.
- * @license    GNU General Public License version 2 or later; see LICENSE.txt
+ * Download robo.phar from http://robo.li/robo.phar and type in the root of the repo: $ php robo.phar
+ * Or do: $ composer update, and afterwards you will be able to execute robo like $ php vendor/bin/robo
+ *
+ * @package     Joomla.Site
+ * @subpackage  RoboFile
+ *
+ * @copyright   Copyright (C) 2005 - 2016 Open Source Matters, Inc. All rights reserved.
+ * @license     GNU General Public License version 2 or later; see LICENSE.txt
  */
 
-use Joomla\Jorobo\Tasks\JTask;
-use Joomla\Jorobo\Tasks\Tasks;
-use Robo\Symfony\ConsoleIO;
-
-if (!defined('JPATH_BASE')) {
-    define('JPATH_BASE', __DIR__);
-}
+use Joomla\Jorobo\Tasks\Tasks as loadReleaseTasks;
+use Robo\Tasks;
 
 if (!defined('GLOB_BRACE')) {
     define('GLOB_BRACE', 0);
 }
 
-// PSR-4 Autoload by composer
-require_once JPATH_BASE . '/vendor/autoload.php';
+require_once 'vendor/autoload.php';
+
+if (!defined('JPATH_BASE')) {
+    define('JPATH_BASE', __DIR__);
+}
 
 /**
- * Sample RoboFile - adjust to your needs, extend your own
+ * Modern php task runner for Joomla! Browser Automated Tests execution
  *
- * @since   1.0.0
+ * @package  RoboFile
+ *
+ * @since    1.0
  */
-class RoboFile extends JTask
+class RoboFile extends Tasks
 {
-    use Tasks;
-
-    public function run(){}
+    // Load tasks from composer, see composer.json
+    use loadReleaseTasks;
 
     /**
-     * Initialize Robo
+     * Constructor
      */
     public function __construct()
     {
+        // Set default timezone (so no warnings are generated if it is not set)
+        date_default_timezone_set('Europe/Berlin');
         $this->stopOnFail(true);
-    }
-
-    /**
-     * Map into Joomla installation.
-     *
-     * @param   String  $target  The target joomla instance
-     *
-     * @return  void
-     */
-    public function map($target, $params = ['base' => JPATH_BASE])
-    {
-        $this->task(\Joomla\Jorobo\Tasks\Map::class, $target, $params)->run();
     }
 
     /**
@@ -59,115 +54,84 @@ class RoboFile extends JTask
      * @param   array  $params  Additional params
      *
      * @return  void
+     * @since   __DEPLOY_VERSION__
      */
-    public function build(ConsoleIO $io, $params = ['dev' => false, 'base' => JPATH_BASE])
+    public function build($params = ['dev' => false])
     {
-        $this->task(\Joomla\Jorobo\Tasks\Build::class, $params)->run();
-
-        $symlinkFileBase = $params['base'] . '/dist/'
-            . $this->getJConfig()->zip_prefix . $this->getJConfig()->extension;
-
-        $this->say('');
-        $this->say('Checksums for Updateserver:');
-        $this->say('');
-        $this->_exec('sha256sum ' . $symlinkFileBase . '-current.zip');
-        $this->_exec('sha512sum ' . $symlinkFileBase . '-current.zip');
-        $this->say('');
-    }
-
-    /**
-     * Generate an extension skeleton - not implemented yet
-     *
-     * @param   array  $extensions  Extensions to build (com_xy, mod_xy, pkg_name, plg_type_name, tpl_name)
-     *
-     * @return  void
-     */
-    public function generate(array $extensions, $params = ['base' => JPATH_BASE])
-    {
-        foreach ($extensions as $extension) {
-            switch (substr($extension, 0, 3)) {
-                case 'com':
-                    $this->task(\Joomla\Jorobo\Tasks\Generate\Component::class, $extension, $params)->run();
-                    break;
-                case 'mod':
-                    $this->task(\Joomla\Jorobo\Tasks\Generate\Module::class, $extension, $params)->run();
-                    break;
-                case 'pkg':
-                    $this->task(\Joomla\Jorobo\Tasks\Generate\Package::class, $extension, $params)->run();
-                    break;
-                case 'plg':
-                    $this->task(\Joomla\Jorobo\Tasks\Generate\Plugin::class, $extension, $params)->run();
-                    break;
-                case 'tpl':
-                    $this->task(\Joomla\Jorobo\Tasks\Generate\Template::class, $extension, $params)->run();
-                    break;
-            }
+        if (!file_exists('jorobo.ini')) {
+            $this->_copy('jorobo.dist.ini', 'jorobo.ini');
         }
-    }
 
-    /**
-     * Generate a component skeleton - not implemented yet
-     *
-     * @param   string  $name  Component name to build (e.g. com_xy)
-     *
-     * @return  void
-     */
-    public function generateComponent($name, $params = ['base' => JPATH_BASE, 'site' => true, 'api' => false, 'media' => false])
-    {
-        $this->task(\Joomla\Jorobo\Tasks\Generate\Component::class, $name, $params)->run();
-    }
-
-    /**
-     * Generate a new component view skeleton - not implemented yet
-     *
-     * @param   string  $name  Component name to target (e.g. com_xy)
-     * @param   string  $view  Name of the view (e.g. article)
-     *
-     * @return  void
-     */
-    public function generateView($name, $view, $params = ['base' => JPATH_BASE])
-    {
-        $this->task(\Joomla\Jorobo\Tasks\Generate\Component::class, $name, $params)->run();
-    }
-
-    /**
-     * Generate a module skeleton - not implemented yet
-     *
-     * The module is generated in a folder structure fitting to directly
-     * commit to a git repository. The structure follows the best coding
-     * examples for Joomla 4.
-     *
-     * @param   string  $name    Module name to build (e.g. mod_xy)
-     * @param   array   $params
-     * @option  $base   A base path for the repository
-     * @option  $client Select the client to build for ('site' or 'admin')
-     *
-     * @return  void
-     */
-    public function generateModule($name, $params = ['base' => JPATH_BASE, 'client' => 'site'])
-    {
-        $this->task(\Joomla\Jorobo\Tasks\Generate\Module::class, $name, $params)->run();
+        $this->task(\Joomla\Jorobo\Tasks\Build::class, $params)->run();
     }
 
     /**
      * Update copyright headers for this project. (Set the text up in the jorobo.ini)
      *
      * @return  void
+     * @since   __DEPLOY_VERSION__
      */
-    public function headers($params = ['base' => JPATH_BASE])
+    public function headers()
     {
-        $this->task(\Joomla\Jorobo\Tasks\CopyrightHeader::class, $params)->run();
+        if (!file_exists('jorobo.ini')) {
+            $this->_copy('jorobo.dist.ini', 'jorobo.ini');
+        }
+
+        $this->task(\Joomla\Jorobo\Tasks\CopyrightHeader::class)->run();
     }
 
     /**
-     * Bump Version placeholder __DEPLOY_VERSION__ in this project. (Set the version up in the jorobo.ini)
+     * Update Version __DEPLOY_VERSION__ in Component. (Set the version up in the jorobo.ini)
      *
      * @return  void
-     *
-     * @since   1.0.0
+     * @since   __DEPLOY_VERSION__
      */
-    public function bump($params = ['base' => JPATH_BASE])
+    public function bump()
     {
-        $this->task(\Joomla\Jorobo\Tasks\BumpVersion::class, $params)->run();
+        $this->task(\Joomla\Jorobo\Tasks\BumpVersion::class)->run();
+    }
+
+    /**
+     * Map into Joomla installation.
+     *
+     * @param   String  $target  The target joomla instance
+     *
+     * @return  void
+     * @since   __DEPLOY_VERSION__
+     *
+     */
+    public function map($target)
+    {
+        $this->task(\Joomla\Jorobo\Tasks\Map::class, $target)->run();
+    }
+
+    /**
+     * Generate joomla.asset.json files
+     *
+     * @return  void
+     * @since   __DEPLOY_VERSION__
+     */
+    public function assetJSON()
+    {
+        if (!file_exists('jorobo.ini')) {
+            $this->_copy('jorobo.dist.ini', 'jorobo.ini');
+        }
+
+        $this->task(\Joomla\Jorobo\Tasks\AssetJSON::class)->run();
+    }
+
+    /**
+     * Generate/extend changelog.xml
+     *
+     * @return  void
+     * @since   __DEPLOY_VERSION__
+     */
+    public function changelog()
+    {
+        if (!file_exists('jorobo.ini')) {
+            $this->_copy('jorobo.dist.ini', 'jorobo.ini');
+        }
+
+        $this->task(\Joomla\Jorobo\Tasks\Changelog::class)->run();
     }
 }

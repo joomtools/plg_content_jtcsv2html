@@ -12,10 +12,15 @@
     }
   ],
   "require-dev": {
-    "joomla-projects/jorobo": "dev-gdg"
+    "joomla-projects/jorobo": "dev-gdg",
+    "phpstan/phpstan": "^2.2",
+    "phpstan/phpstan-deprecation-rules": "^2.0",
+    "squizlabs/php_codesniffer": "^4.0",
+    "friendsofphp/php-cs-fixer": "^3.95"
   },
   "scripts": {
     "build": "composer exec robo build",
+    "bump": "composer exec robo bump",
     "headers": "composer exec robo headers",
     "map": "composer exec robo map"
   }
